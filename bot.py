@@ -1,41 +1,32 @@
-# bot.py
 import os
 import discord
 from discord.ext import commands
+import sys
 
-# Récupère le token depuis la variable d'environnement
 TOKEN = os.getenv("TOKEN")
-
 if not TOKEN:
-    raise RuntimeError("❌ La variable d'environnement 'TOKEN' est manquante !")
+    print("❌ ERREUR : TOKEN manquant dans les variables d'environnement.", file=sys.stderr)
+    sys.exit(1)
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# Intents complets (nécessaires pour les logs, modération, etc.)
-intents = discord.Intents.all()
-bot = commands.Bot(
-    command_prefix="!",
-    intents=intents,
-    help_command=None,
-    case_insensitive=True
-)
-
-# Charger tous les cogs
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} est en ligne !")
-    print(f"🔗 Connecté à {len(bot.guilds)} serveur(s)")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="/bypass"))
+    print(f"✅ {bot.user} est en ligne sur {len(bot.guilds)} serveur(s).")
+    try:
+        synced = await bot.tree.sync()
+        print(f"🌐 {len(synced)} commandes synchronisées.")
+    except Exception as e:
+        print(f"❌ Erreur de synchronisation : {e}")
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="/help"))
 
-# Auto-load des cogs
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py") and filename != "__init__.py":
         try:
             bot.load_extension(f"cogs.{filename[:-3]}")
             print(f"📦 Cog chargé : {filename}")
         except Exception as e:
-            print(f"❌ Erreur chargement {filename}: {e}")
+            print(f"❌ Erreur dans {filename}: {e}")
 
-# Lancer le bot
 bot.run(TOKEN)
