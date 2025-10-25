@@ -1,16 +1,16 @@
 # bot.py
-import os
 import discord
 from discord.ext import commands
+import json
+import os
 
-# Récupère le token depuis la variable d'environnement
-TOKEN = os.getenv("TOKEN")
-
-if not TOKEN:
-    raise RuntimeError("❌ La variable d'environnement 'TOKEN' est manquante !")
-
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+# Charger le token (en local ou depuis Railway)
+if os.path.exists("config.json"):
+    with open("config.json") as f:
+        config = json.load(f)
+    TOKEN = config["token"]
+else:
+    TOKEN = os.getenv("TOKEN")  # Pour Railway
 
 # Intents complets (nécessaires pour les logs, modération, etc.)
 intents = discord.Intents.all()
