@@ -29,4 +29,8 @@ for filename in os.listdir("./cogs"):
         except Exception as e:
             print(f"❌ Erreur dans {filename}: {e}")
 
+@bot.slash_command()
+async def test(ctx):
+    await ctx.respond("✅ Commande test fonctionnelle !")
+    
 bot.run(TOKEN)

@@ -43,7 +43,7 @@ class BypassSystem(commands.Cog):
         channel_id = str(channel.id)
         user_id = str(membre.id)
         guild_data = self.get_guild_data(ctx.guild.id)
-        if channel_id not in guild_
+        if channel_id not in guild_data:
             guild_data[channel_id] = []
         if user_id not in guild_data[channel_id]:
             guild_data[channel_id].append(user_id)

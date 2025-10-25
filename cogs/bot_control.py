@@ -7,8 +7,8 @@ class BotControl(commands.Cog):
         self.bot = bot
 
     @commands.slash_command(name="bot_on", description="Annoncer que le bot est en ligne")
-    @commands.has_permissions(administrator=True)
-    async def bot_on(self, ctx, rajout: str = ""):
+    @commands.slash_command(name="bot_on")
+    async def cmd_bot_on(self, ctx, ...):  # ← nom interne différent
         msg = "✅ **Le bot est de nouveau en ligne !**"
         if rajout:
             msg += f"\n> {rajout}"
