@@ -1,6 +1,7 @@
-# cogs/bot_control.py
+import os
 import discord
 from discord.ext import commands
+import sys
 
 class BotControl(commands.Cog):
     def __init__(self, bot):
