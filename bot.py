@@ -1,36 +1,32 @@
-import os
+# cogs/bot_control.py
 import discord
 from discord.ext import commands
-import sys
 
-TOKEN = os.getenv("TOKEN")
-if not TOKEN:
-    print("❌ ERREUR : TOKEN manquant dans les variables d'environnement.", file=sys.stderr)
-    sys.exit(1)
+class BotControl(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
 
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+    @discord.slash_command(name="bot_on", description="Annoncer que le bot est en ligne")
+    @commands.has_permissions(administrator=True)
+    async def cmd_bot_on(self, ctx, rajout: str = ""):
+        msg = "✅ **Le bot est de nouveau en ligne !**"
+        if rajout:
+            msg += f"\n> {rajout}"
+        await ctx.channel.send(msg)
 
-@bot.event
-async def on_ready():
-    print(f"✅ {bot.user} est en ligne sur {len(bot.guilds)} serveur(s).")
-    try:
-        synced = await bot.tree.sync()
-        print(f"🌐 {len(synced)} commandes synchronisées.")
-    except Exception as e:
-        print(f"❌ Erreur de synchronisation : {e}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="/help"))
+    @discord.slash_command(name="bot_off", description="Annoncer une maintenance")
+    @commands.has_permissions(administrator=True)
+    async def cmd_bot_off(self, ctx, raison: str, temps: str):
+        await ctx.channel.send(f"⚠️ **Maintenance prévue**\nRaison : {raison}\nTemps estimé : {temps}")
 
-for filename in os.listdir("./cogs"):
-    if filename.endswith(".py") and filename != "__init__.py":
-        try:
-            bot.load_extension(f"cogs.{filename[:-3]}")
-            print(f"📦 Cog chargé : {filename}")
-        except Exception as e:
-            print(f"❌ Erreur dans {filename}: {e}")
+    @discord.slash_command(name="bot_redem", description="Annoncer un redémarrage")
+    @commands.has_permissions(administrator=True)
+    async def cmd_bot_redem(self, ctx):
+        await ctx.channel.send("🔄 **Redémarrage en cours...**")
 
-@bot.slash_command()
-async def test(ctx):
-    await ctx.respond("✅ Commande test fonctionnelle !")
-    
-bot.run(TOKEN)
+    @discord.slash_command(name="bot_ping", description="Voir la latence")
+    async def cmd_bot_ping(self, ctx):
+        await ctx.respond(f"🏓 Pong ! `{round(self.bot.latency * 1000)} ms`")
+
+def setup(bot):
+    bot.add_cog(BotControl(bot))
