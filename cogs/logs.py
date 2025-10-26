@@ -22,6 +22,18 @@ class LogsSystem(commands.Cog):
         self.config_path = "data/logs_config.json"
         self.config = load_json(self.config_path, {})
 
+    def log_ticket_event(self, guild_id, event_type, author, channel=None, details=""):
+        """À appeler depuis tickets.py"""
+        embed = discord.Embed(
+        title=f"🎫 Ticket - {event_type}",
+        description=f"**Utilisateur** : {author.mention}\n**Détails** : {details}",
+        color=0x5865F2,
+        timestamp=datetime.utcnow()
+     )
+        if channel:
+            embed.add_field(name="Salon", value=channel.mention)
+        self.send_log(guild_id, "ticket", embed)
+
     def get_log_channel(self, guild_id, log_type):
         guild_data = self.config.get(str(guild_id), {})
         channel_id = guild_data.get(log_type)
@@ -79,6 +91,18 @@ class LogsSystem(commands.Cog):
         )
         embed.set_footer(text=f"ID: {message.id}")
         await self.send_log(message.guild.id, "message", embed)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_create(self, channel):
+        if not isinstance(channel, discord.TextChannel) or not channel.name.startswith("ticket-"):
+            return
+        embed = discord.Embed(
+            title="🎫 Ticket créé",
+            description=f"**Salon** : {channel.mention}\n**Créé par** : Système de ticket",
+            color=0x5865F2,
+            timestamp=datetime.utcnow()
+        )
+        await self.send_log(channel.guild.id, "moderation", embed)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
