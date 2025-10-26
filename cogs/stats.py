@@ -1,79 +1,64 @@
 # cogs/stats.py
 import discord
 from discord.ext import commands
-import psutil
-import platform
 import datetime
 
 class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="stats", description="📊 Statistiques du bot et du serveur")
+    @discord.slash_command(name="stats", description="📊 Statistiques du serveur & du bot")
     async def stats(self, ctx):
-        # === DONNÉES DU SERVEUR ===
         guild = ctx.guild
         if not guild:
             return await ctx.respond("❌ Commande utilisable uniquement dans un serveur.", ephemeral=False)
 
-        member_count = guild.member_count
-        human_count = sum(1 for m in guild.members if not m.bot)
-        bot_count = member_count - human_count
-        channel_count = len(guild.channels)
-        role_count = len(guild.roles)
-
-        # === DONNÉES DU BOT ===
+        # === DONNÉES ===
+        total_members = guild.member_count
+        humans = sum(1 for m in guild.members if not m.bot)
+        bots = total_members - humans
+        channels = len(guild.channels)
+        roles = len(guild.roles)
         ping = round(self.bot.latency * 1000)
-        uptime = "En ligne"
-        python_version = platform.python_version()
-        discord_version = discord.__version__
 
-        # === EMBED PRINCIPAL ===
+        # === EMBED STYLÉ ===
         embed = discord.Embed(
-            title="✨ **Statistiques du Serveur & du Bot**",
-            color=0x002366,  # Bleu marine profond
-            timestamp=datetime.datetime.utcnow()
+            title="",
+            description="```ansi\n"
+                        "[2;34m┌──────────────────────────────┐[0m\n"
+                        "[2;34m│ [0m✨ [1;36mSTATISTIQUES DU SERVEUR [0m[2;34m │[0m\n"
+                        "[2;34m└──────────────────────────────┘[0m\n"
+                        "```",
+            color=0x000000  # Noir pour fond sombre
         )
-
-        file = discord.File("data/border.png", filename="border.png")
-        embed.set_image(url="attachment://border.png")
-        await ctx.respond(embed=embed, file=file, ephemeral=False)
 
         # Serveur
         embed.add_field(
-            name="📁 **Serveur**",
-            value=(
-                f"👥 **Membres** : `{member_count:,}`\n"
-                f"🧑 **Humains** : `{human_count:,}`\n"
-                f"🤖 **Bots** : `{bot_count:,}`\n"
-                f"📚 **Salons** : `{channel_count}`\n"
-                f"🎭 **Rôles** : `{role_count}`"
-            ),
+            name="```ansi\n[2;34m📁 SERVEUR[0m```",
+            value="```ansi\n"
+                  f"[2;37m👥 Membres : [0m[1;33m{total_members:,}[0m\n"
+                  f"[2;37m🧑 Humains  : [0m[1;32m{humans:,}[0m\n"
+                  f"[2;37m🤖 Bots     : [0m[1;31m{bots:,}[0m\n"
+                  f"[2;37m📚 Salons   : [0m[1;36m{channels}[0m\n"
+                  f"[2;37m🎭 Rôles    : [0m[1;35m{roles}[0m\n"
+                  "```",
             inline=True
         )
 
         # Bot
         embed.add_field(
-            name="🤖 **Bot**",
-            value=(
-                f"📡 **Latence** : `{ping} ms`\n"
-                f"🕒 **Uptime** : `{uptime}`\n"
-                f"🐍 **Python** : `{python_version}`\n"
-                f"👾 **discord.py** : `{discord_version}`"
-            ),
+            name="```ansi\n[2;34m🤖 BOT[0m```",
+            value="```ansi\n"
+                  f"[2;37m📡 Latence  : [0m[1;33m{ping} ms[0m\n"
+                  f"[2;37m🕒 Uptime   : [0m[1;32mEn ligne[0m\n"
+                  f"[2;37m👾 Version  : [0m[1;36m1.0.0[0m\n"
+                  "```",
             inline=True
         )
 
-        # Barre décorative
-        embed.add_field(
-            name="\u200b",
-            value="⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
-            inline=False
-        )
-
-        # Footer élégant
+        # Footer
         embed.set_footer(
-            text="Demandé par " + ctx.author.name,
+            text=f"• BY {ctx.author} •",
             icon_url=ctx.author.display_avatar.url
         )
 
@@ -81,7 +66,6 @@ class Stats(commands.Cog):
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        # Réponse publique
         await ctx.respond(embed=embed, ephemeral=False)
 
 def setup(bot):

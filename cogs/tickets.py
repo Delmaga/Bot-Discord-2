@@ -44,25 +44,26 @@ class TicketActionView(discord.ui.View):
         if not messages:
             return await interaction.response.send_message("📭 Aucun message à transcrire.", ephemeral=True)
 
-        transcript = "\n".join(messages)
+        transcript_text = "\n".join(messages)
         try:
             await interaction.user.send(
-                f"📄 **Transcript** — {interaction.channel.name}\n```txt\n{transcript[:1900]}\n```"
+                f"📄 **Transcript du ticket** : {interaction.channel.name}\n```txt\n{transcript_text[:1900]}\n```"
             )
             await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
         except:
-            await interaction.response.send_message("❌ Vos MP sont fermés.", ephemeral=True)
+            await interaction.response.send_message("❌ Impossible de vous envoyer un MP.", ephemeral=True)
 
     @discord.ui.button(label="Fermer", style=discord.ButtonStyle.danger, emoji="🔒")
     async def close_ticket(self, button, interaction):
         if not interaction.user.guild_permissions.manage_channels:
-            return await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
+            return await interaction.response.send_message("❌ Vous n'avez pas la permission.", ephemeral=True)
 
         await interaction.channel.edit(name=f"closed-{interaction.channel.name}")
-        await interaction.channel.send("🔒 Ce ticket sera supprimé dans **24h**.")
+        await interaction.channel.send("🔒 Ce ticket sera supprimé dans **24 heures**.")
         await interaction.response.defer()
 
         # Suppression après 24h
+        import asyncio
         await asyncio.sleep(24 * 3600)
         try:
             await interaction.channel.delete()
