@@ -19,7 +19,7 @@ async def on_ready():
         print(f"🌐 {len(synced)} commandes synchronisées.")
     except Exception as e:
         print(f"❌ Erreur de synchronisation : {e}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="/help"))
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Visual Studio Code"))
 
 # Charger les cogs
 for filename in os.listdir("./cogs"):

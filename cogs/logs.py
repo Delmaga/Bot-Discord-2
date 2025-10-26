@@ -45,7 +45,7 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["message"] = str(salon.id)
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Logs messages → {salon.mention}", ephemeral=True)
+        await ctx.respond(f"✅ Logs messages → {salon.mention}")
 
     @logs.command(name="modération", description="Salon pour les logs de modération")
     @commands.has_permissions(administrator=True)
@@ -55,7 +55,7 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["moderation"] = str(salon.id)
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Logs modération → {salon.mention}", ephemeral=True)
+        await ctx.respond(f"✅ Logs modération → {salon.mention}")
 
     @logs.command(name="ticket", description="Salon pour les logs de tickets")
     @commands.has_permissions(administrator=True)
@@ -65,7 +65,7 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["ticket"] = str(salon.id)
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Logs tickets → {salon.mention}", ephemeral=True)
+        await ctx.respond(f"✅ Logs tickets → {salon.mention}")
 
     @commands.Cog.listener()
     async def on_message(self, message):

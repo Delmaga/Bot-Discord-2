@@ -9,16 +9,16 @@ class Other(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def say(self, ctx, salon: discord.TextChannel, message: str):
         await salon.send(message)
-        await ctx.respond("✅ Message envoyé.", ephemeral=True)
+        await ctx.respond("✅ Message envoyé.")
 
     @commands.slash_command(name="say_dm", description="Envoyer un MP")
     @commands.has_permissions(administrator=True)
     async def say_dm(self, ctx, membre: discord.Member, message: str):
         try:
             await membre.send(message)
-            await ctx.respond(f"✅ MP envoyé à {membre.mention}.", ephemeral=True)
+            await ctx.respond(f"✅ MP envoyé à {membre.mention}.")
         except:
-            await ctx.respond("❌ Impossible d'envoyer le MP.", ephemeral=True)
+            await ctx.respond("❌ Impossible d'envoyer le MP.")
 
     @commands.slash_command(name="help", description="Afficher l'aide")
     async def help(self, ctx):

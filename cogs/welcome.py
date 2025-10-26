@@ -51,27 +51,27 @@ class WelcomeSystem(commands.Cog):
         gid = str(ctx.guild.id)
         self.config[gid] = {"title": titre, "description": description, "channel": str(salon.id), "roles": []}
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Bienvenue configuré dans {salon.mention}.", ephemeral=True)
+        await ctx.respond(f"✅ Bienvenue configuré dans {salon.mention}.")
 
     @welcome.command(name="role", description="Ajouter un rôle à donner à l'arrivée")
     @commands.has_permissions(administrator=True)
     async def role(self, ctx, rôle: discord.Role):
         gid = str(ctx.guild.id)
         if gid not in self.config:
-            return await ctx.respond("❌ Configure d'abord le message avec `/welcome create`.", ephemeral=True)
+            return await ctx.respond("❌ Configure d'abord le message avec `/welcome create`.")
         if "roles" not in self.config[gid]:
             self.config[gid]["roles"] = []
         if str(rôle.id) not in self.config[gid]["roles"]:
             self.config[gid]["roles"].append(str(rôle.id))
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Rôle {rôle.mention} ajouté à la bienvenue.", ephemeral=True)
+        await ctx.respond(f"✅ Rôle {rôle.mention} ajouté à la bienvenue.")
 
     @welcome.command(name="test", description="Tester le message de bienvenue")
     @commands.has_permissions(administrator=True)
     async def test(self, ctx):
         gid = str(ctx.guild.id)
         if gid not in self.config:
-            return await ctx.respond("❌ Bienvenue non configuré.", ephemeral=True)
+            return await ctx.respond("❌ Bienvenue non configuré.")
         cfg = self.config[gid]
         embed = discord.Embed(
             title=cfg.get("title", "Bienvenue !"),

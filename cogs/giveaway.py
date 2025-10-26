@@ -49,19 +49,19 @@ class GiveawayHandler(commands.Cog):
 
         # Vérifier que le giveaway existe et n'est pas terminé
         if guild_id not in giveaways or giveaway_id not in giveaways[guild_id]:
-            return await interaction.response.send_message("❌ Ce giveaway n'existe plus.", ephemeral=True)
+            return await interaction.response.send_message("❌ Ce giveaway n'existe plus.")
 
         giveaway = giveaways[guild_id][giveaway_id]
         if giveaway.get("ended", False):
-            return await interaction.response.send_message("✅ Ce giveaway est terminé.", ephemeral=True)
+            return await interaction.response.send_message("✅ Ce giveaway est terminé.")
 
         user_id = str(interaction.user.id)
         if user_id in giveaway["participants"]:
-            return await interaction.response.send_message("✅ Vous participez déjà !", ephemeral=True)
+            return await interaction.response.send_message("✅ Vous participez déjà !")
 
         giveaway["participants"].append(user_id)
         save_json("data/giveaways.json", giveaways)
-        await interaction.response.send_message("✅ Participation enregistrée !", ephemeral=True)
+        await interaction.response.send_message("✅ Participation enregistrée !")
 
 class GiveawaySystem(commands.Cog):
     def __init__(self, bot):
@@ -82,7 +82,7 @@ class GiveawaySystem(commands.Cog):
     async def create(self, ctx, titre: str, description: str, temps: str, gagnants: int, salon: discord.TextChannel = None):
         seconds = self.parse_time(temps)
         if seconds <= 0:
-            return await ctx.respond("❌ Format de temps invalide. Ex: `2h30m`", ephemeral=True)
+            return await ctx.respond("❌ Format de temps invalide. Ex: `2h30m`")
 
         end_timestamp = int((datetime.now().timestamp() + seconds))
         channel = salon or ctx.channel
@@ -117,7 +117,7 @@ class GiveawaySystem(commands.Cog):
 
         view = GiveawayView(giveaway_id)
         await channel.send(embed=embed, view=view)
-        await ctx.respond("✅ Giveaway lancé !", ephemeral=True)
+        await ctx.respond("✅ Giveaway lancé !")
 
     @giveaway.command(name="end", description="Terminer un giveaway maintenant")
     @commands.has_permissions(manage_guild=True)
@@ -126,11 +126,11 @@ class GiveawaySystem(commands.Cog):
         guild_id = str(ctx.guild.id)
 
         if guild_id not in giveaways or giveaway_id not in giveaways[guild_id]:
-            return await ctx.respond("❌ Giveaway introuvable.", ephemeral=True)
+            return await ctx.respond("❌ Giveaway introuvable.")
 
         giveaway = giveaways[guild_id][giveaway_id]
         if giveaway["ended"]:
-            return await ctx.respond("✅ Ce giveaway est déjà terminé.", ephemeral=True)
+            return await ctx.respond("✅ Ce giveaway est déjà terminé.")
 
         giveaway["ended"] = True
         save_json("data/giveaways.json", giveaways)
@@ -138,7 +138,7 @@ class GiveawaySystem(commands.Cog):
         # Tirage
         channel = self.bot.get_channel(int(giveaway["channel_id"]))
         if not channel:
-            return await ctx.respond("❌ Salon introuvable.", ephemeral=True)
+            return await ctx.respond("❌ Salon introuvable.")
 
         valid_participants = []
         for uid in giveaway["participants"]:
@@ -154,7 +154,7 @@ class GiveawaySystem(commands.Cog):
             result = f"🎉 **Félicitations** : {winner_mentions} !"
 
         await channel.send(f"**Résultat du giveaway : {giveaway['title']}**\n{result}")
-        await ctx.respond("✅ Giveaway terminé et résultats publiés.", ephemeral=True)
+        await ctx.respond("✅ Giveaway terminé et résultats publiés.")
 
     @giveaway.command(name="list", description="Liste des giveaways actifs")
     @commands.has_permissions(manage_guild=True)
@@ -163,7 +163,7 @@ class GiveawaySystem(commands.Cog):
         guild_id = str(ctx.guild.id)
 
         if guild_id not in giveaways or not giveaways[guild_id]:
-            return await ctx.respond("📭 Aucun giveaway actif.", ephemeral=True)
+            return await ctx.respond("📭 Aucun giveaway actif.")
 
         lines = []
         for gwid, gw in giveaways[guild_id].items():
@@ -171,7 +171,7 @@ class GiveawaySystem(commands.Cog):
             lines.append(f"- **{gw['title']}** ({status}) — Fin : <t:{gw['end_time']}:R>")
 
         embed = discord.Embed(title="🎁 Giveaways", description="\n".join(lines[:10]), color=0x5865F2)
-        await ctx.respond(embed=embed, ephemeral=True)
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(GiveawayHandler(bot))  # Pour gérer les boutons

@@ -34,11 +34,11 @@ class BypassSystem(commands.Cog):
     async def add(self, ctx, membre: discord.Member, salon: discord.TextChannel = None):
         channel = salon or ctx.channel
         if not isinstance(channel, discord.TextChannel):
-            return await ctx.respond("❌ Salon invalide.", ephemeral=True)
+            return await ctx.respond("❌ Salon invalide.")
         try:
             await channel.set_permissions(membre, view_channel=True, send_messages=True)
         except discord.Forbidden:
-            return await ctx.respond("❌ Permission refusée.", ephemeral=True)
+            return await ctx.respond("❌ Permission refusée.")
         guild_id = str(ctx.guild.id)
         channel_id = str(channel.id)
         user_id = str(membre.id)
@@ -48,17 +48,17 @@ class BypassSystem(commands.Cog):
         if user_id not in guild_data[channel_id]:
             guild_data[channel_id].append(user_id)
         self.set_guild_data(ctx.guild.id, guild_data)
-        await ctx.respond(f"✅ Accès accordé à {membre.mention} dans {channel.mention}.", ephemeral=True)
+        await ctx.respond(f"✅ Accès accordé à {membre.mention} dans {channel.mention}.")
 
     @bypass.command(name="del", description="Retirer l'accès d'un membre")
     async def delete(self, ctx, membre: discord.Member, salon: discord.TextChannel = None):
         channel = salon or ctx.channel
         if not isinstance(channel, discord.TextChannel):
-            return await ctx.respond("❌ Salon invalide.", ephemeral=True)
+            return await ctx.respond("❌ Salon invalide.")
         try:
             await channel.set_permissions(membre, overwrite=None)
         except discord.Forbidden:
-            return await ctx.respond("❌ Permission refusée.", ephemeral=True)
+            return await ctx.respond("❌ Permission refusée.")
         guild_id = str(ctx.guild.id)
         channel_id = str(channel.id)
         user_id = str(membre.id)
@@ -68,7 +68,7 @@ class BypassSystem(commands.Cog):
             if not guild_data[channel_id]:
                 del guild_data[channel_id]
             self.set_guild_data(ctx.guild.id, guild_data)
-        await ctx.respond(f"✅ Accès retiré à {membre.mention}.", ephemeral=True)
+        await ctx.respond(f"✅ Accès retiré à {membre.mention}.")
 
     @bypass.command(name="list", description="Lister les membres avec accès forcé")
     async def list_bypass(self, ctx, salon: discord.TextChannel = None):
@@ -76,7 +76,7 @@ class BypassSystem(commands.Cog):
         guild_data = self.get_guild_data(ctx.guild.id)
         channel_id = str(channel.id)
         if channel_id not in guild_data or not guild_data[channel_id]:
-            return await ctx.respond("📭 Aucun membre avec accès forcé.", ephemeral=True)
+            return await ctx.respond("📭 Aucun membre avec accès forcé.")
         members = []
         for uid in guild_data[channel_id]:
             member = ctx.guild.get_member(int(uid))
@@ -85,7 +85,7 @@ class BypassSystem(commands.Cog):
             else:
                 members.append(f"- ID: {uid}")
         embed = discord.Embed(title="🔐 Membres en bypass", description="\n".join(members), color=0x5865F2)
-        await ctx.respond(embed=embed, ephemeral=True)
+        await ctx.respond(embed=embed)
 
 def setup(bot):
     bot.add_cog(BypassSystem(bot))
