@@ -9,7 +9,7 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)  # ← Obligatoire pour les slash commands
+bot = discord.Bot(intents=intents)  # ← Défini ici, une seule fois
 
 @bot.event
 async def on_ready():
@@ -20,7 +20,6 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Erreur sync : {e}")
 
-# Charger les cogs
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py") and filename != "__init__.py":
         try:

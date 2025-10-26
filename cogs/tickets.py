@@ -61,7 +61,7 @@ class TicketCategorySelect(discord.ui.Select):
             f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
             "Merci de détailler votre demande. Un membre de l'équipe vous répondra sous 24-48h."
         )
-        await channel.send(content=ping, content=message)
+        await channel.send(content=f"{ping}\n{message}")
         await interaction.response.send_message(f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}", ephemeral=False)
 
 class TicketView(discord.ui.View):
