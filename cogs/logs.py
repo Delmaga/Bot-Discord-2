@@ -73,15 +73,20 @@ class LogsSystem(commands.Cog):
         if message.author.bot or not message.guild:
             return
         embed = discord.Embed(
+            title="",
             description=(
-                f"📥 **Message envoyé**\n"
-                f"**Auteur** : {message.author.mention}\n"
-                f"**Salon** : {message.channel.mention}\n"
-                f"**Contenu** : {message.content[:1000]}"
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m📥 [1;36mMESSAGE ENVOYÉ [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
             ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="👤 Auteur", value=message.author.mention, inline=True)
+        embed.add_field(name="# Salon", value=message.channel.mention, inline=True)
+        embed.add_field(name="💬 Contenu", value=f"```{message.content[:500]}```" if message.content else "*(Pièce jointe)*", inline=False)
         embed.set_footer(text=f"ID: {message.id}")
         await self.send_log(message.guild.id, "message", embed)
 
@@ -90,15 +95,20 @@ class LogsSystem(commands.Cog):
         if before.author.bot or not before.guild or before.content == after.content:
             return
         embed = discord.Embed(
+            title="",
             description=(
-                f"✏️ **Message modifié**\n"
-                f"**Auteur** : {before.author.mention}\n"
-                f"**Avant** : {before.content[:500]}\n"
-                f"**Après** : {after.content[:500]}"
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m✏️ [1;36mMESSAGE MODIFIÉ [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
             ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="Avant", value=f"```{before.content[:250]}```", inline=False)
+        embed.add_field(name="Après", value=f"```{after.content[:250]}```", inline=False)
+        embed.set_footer(text=f"Auteur: {before.author} • ID: {before.id}")
         await self.send_log(before.guild.id, "message", embed)
 
     @commands.Cog.listener()
@@ -106,15 +116,20 @@ class LogsSystem(commands.Cog):
         if message.author.bot or not message.guild:
             return
         embed = discord.Embed(
+            title="",
             description=(
-                f"🗑️ **Message supprimé**\n"
-                f"**Auteur** : {message.author.mention}\n"
-                f"**Salon** : {message.channel.mention}\n"
-                f"**Contenu** : {message.content[:1000]}"
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m🗑️ [1;36mMESSAGE SUPPRIMÉ [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
             ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="👤 Auteur", value=message.author.mention, inline=True)
+        embed.add_field(name="# Salon", value=message.channel.mention, inline=True)
+        embed.add_field(name="💬 Contenu", value=f"```{message.content[:500]}```", inline=False)
         embed.set_footer(text=f"ID: {message.id}")
         await self.send_log(message.guild.id, "message", embed)
 
@@ -123,19 +138,37 @@ class LogsSystem(commands.Cog):
         if not hasattr(channel, 'guild'):
             return
         embed = discord.Embed(
-            description=f"🆕 **Salon créé** : `{channel.name}`",
+            title="",
+            description=(
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m🆕 [1;36mSALON CRÉÉ [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
+            ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="Nom", value=f"`{channel.name}`", inline=True)
+        embed.add_field(name="Type", value=type(channel).__name__, inline=True)
         await self.send_log(channel.guild.id, "moderation", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
         embed = discord.Embed(
-            description=f"➕ **Rôle créé** : {role.mention}",
+            title="",
+            description=(
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m➕ [1;36mRÔLE CRÉÉ [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
+            ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
+        embed.add_field(name="Rôle", value=role.mention, inline=True)
+        embed.add_field(name="Couleur", value=str(role.color), inline=True)
         await self.send_log(role.guild.id, "moderation", embed)
 
 def setup(bot):

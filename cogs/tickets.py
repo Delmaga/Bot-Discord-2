@@ -35,21 +35,15 @@ class TicketActionView(discord.ui.View):
         if not interaction.user.guild_permissions.manage_channels:
             await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
             return
-
         messages = []
         async for msg in interaction.channel.history(limit=1000, oldest_first=True):
             if msg.type == discord.MessageType.default and not msg.author.bot:
                 content = msg.content or "[Contenu non textuel]"
                 messages.append(f"[{msg.created_at.strftime('%H:%M')}] **{msg.author}** : {content}")
-
         if not messages:
             return await interaction.response.send_message("📭 Aucun message à transcrire.", ephemeral=True)
-
         try:
-            await interaction.user.send(
-                f"**📄 Transcript du ticket : {interaction.channel.name}**\n```txt\n" +
-                "\n".join(messages)[:1900] + "\n```"
-            )
+            await interaction.user.send(f"**📄 Transcript du ticket : {interaction.channel.name}**\n```txt\n" + "\n".join(messages)[:1900] + "\n```")
             await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
         except:
             await interaction.response.send_message("❌ Impossible d'envoyer un MP.", ephemeral=True)
@@ -59,7 +53,6 @@ class TicketActionView(discord.ui.View):
         if not interaction.user.guild_permissions.manage_channels:
             await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
             return
-
         await interaction.channel.edit(name=f"closed-{interaction.channel.name}")
         await interaction.channel.send("🔒 Ce ticket sera supprimé dans **24 heures**.")
         await interaction.response.defer()
@@ -71,14 +64,7 @@ class TicketActionView(discord.ui.View):
 
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
-        options = [
-            discord.SelectOption(
-                label=cat["name"],
-                description=cat["description"][:100],
-                emoji=cat["emoji"]
-            )
-            for cat in config["categories"]
-        ]
+        options = [discord.SelectOption(label=cat["name"], description=cat["description"][:100], emoji=cat["emoji"]) for cat in config["categories"]]
         super().__init__(placeholder="Sélectionnez une catégorie", options=options)
         self.config = config
         self.target_channel = target_channel
@@ -89,51 +75,34 @@ class TicketCategorySelect(discord.ui.Select):
         if not category:
             await interaction.response.send_message("❌ Catégorie introuvable.", ephemeral=True)
             return
-
         guild = interaction.guild
         user = interaction.user
-
-        overwrites = {
-            guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
-        }
-
+        overwrites = {guild.default_role: discord.PermissionOverwrite(read_messages=False), user: discord.PermissionOverwrite(read_messages=True, send_messages=True), guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)}
         ping = ""
         if self.config.get("ping_role"):
             role = guild.get_role(self.config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                 ping = f"🔔 {role.mention}"
-
-        channel = await guild.create_text_channel(
-            name=f"ticket-{user.name}",
-            overwrites=overwrites,
-            category=self.target_channel.category
-        )
-
-        # Embed SANS BLOC BLEU
+        channel = await guild.create_text_channel(f"ticket-{user.name}", overwrites=overwrites, category=self.target_channel.category)
         embed = discord.Embed(
+            title="",
             description=(
-                f"**🎫 Nouveau ticket ouvert**\n\n"
-                f"**Catégorie** : {category['name']}\n"
-                f"**Utilisateur** : {user.mention}\n"
-                f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
-                "Merci de détailler votre demande. Un membre de l'équipe vous répondra sous 24-48h."
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m🎫 [1;36mNOUVEAU TICKET OUVERT [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
             ),
-            color=0x2b2d31  # ← Gris foncé = invisible sur fond Discord
+            color=0x2b2d31
         )
-        if guild.icon:
-            embed.set_thumbnail(url=guild.icon.url)
+        embed.add_field(name="📋 Informations", value=f"**Catégorie** : {category['name']}\n**Utilisateur** : {user.mention}\n**Heure** : <t:{int(datetime.now().timestamp())}:F>", inline=False)
+        embed.add_field(name="📝 Instructions", value="• Soyez précis dans votre demande\n• Un membre de l'équipe vous répondra sous 24-48h.", inline=False)
+        if guild.icon: embed.set_thumbnail(url=guild.icon.url)
         embed.set_footer(text=f"By {self.config['footer']}")
-
         await channel.send(content=ping, embed=embed)
         await channel.send("**🛠️ Actions disponibles :**", view=TicketActionView())
-
-        await interaction.response.send_message(
-            f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}",
-            ephemeral=False
-        )
+        await interaction.response.send_message(f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}", ephemeral=False)
 
 class TicketView(discord.ui.View):
     def __init__(self, config, target_channel):
@@ -147,14 +116,7 @@ class TicketSystem(commands.Cog):
         self.config = load_json(self.config_path, {})
 
     def get_guild_config(self, guild_id):
-        return self.config.get(str(guild_id), {
-            "categories": [
-                {"name": "Support", "description": "Besoin d'aide ?", "emoji": "❓"},
-                {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}
-            ],
-            "footer": "By Delmaga",
-            "ping_role": None
-        })
+        return self.config.get(str(guild_id), {"categories": [{"name": "Support", "description": "Besoin d'aide ?", "emoji": "❓"}, {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}], "footer": "By Delmaga", "ping_role": None})
 
     def set_guild_config(self, guild_id, data):
         self.config[str(guild_id)] = data
@@ -166,20 +128,19 @@ class TicketSystem(commands.Cog):
         if not config["categories"]:
             await ctx.respond("❌ Aucune catégorie configurée.", ephemeral=False)
             return
-
         embed = discord.Embed(
+            title="",
             description=(
-                "--------------------------------"
-                "🎫 **Centre d'assistance**\n\n"
-                "--------------------------------"
-                "Sélectionnez une catégorie ci-dessous pour ouvrir un ticket."
+                "```ansi\n"
+                "[2;34m┌──────────────────────────────┐[0m\n"
+                "[2;34m│ [0m🎫 [1;36mCENTRE D'ASSISTANCE [0m[2;34m │[0m\n"
+                "[2;34m└──────────────────────────────┘[0m\n"
+                "```"
             ),
             color=0x2b2d31
         )
-        if ctx.guild.icon:
-            embed.set_thumbnail(url=ctx.guild.icon.url)
+        if ctx.guild.icon: embed.set_thumbnail(url=ctx.guild.icon.url)
         embed.set_footer(text=f"By {config['footer']}")
-
         view = TicketView(config, ctx.channel)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
 
