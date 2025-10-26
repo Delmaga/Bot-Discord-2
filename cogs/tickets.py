@@ -28,7 +28,14 @@ def make_boxed_title(title, icon="🎫"):
 
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
-        options = [discord.SelectOption(label=cat["name"], description=cat["description"][:100], emoji=cat["emoji"]) for cat in config["categories"]]
+        options = [
+            discord.SelectOption(
+                label=cat["name"],
+                description=cat["description"][:100],
+                emoji=cat["emoji"]
+            )
+            for cat in config["categories"]
+        ]
         super().__init__(placeholder="Sélectionnez une catégorie", options=options)
         self.config = config
         self.target_channel = target_channel
@@ -39,16 +46,29 @@ class TicketCategorySelect(discord.ui.Select):
         if not category:
             await interaction.response.send_message("❌ Catégorie introuvable.", ephemeral=True)
             return
+
         guild = interaction.guild
         user = interaction.user
-        overwrites = {guild.default_role: discord.PermissionOverwrite(read_messages=False), user: discord.PermissionOverwrite(read_messages=True, send_messages=True), guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)}
+
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            user: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+            guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
+        }
+
         ping = ""
         if self.config.get("ping_role"):
             role = guild.get_role(self.config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                 ping = f"🔔 {role.mention}"
-        channel = await guild.create_text_channel(f"ticket-{user.name}", overwrites=overwrites, category=self.target_channel.category)
+
+        channel = await guild.create_text_channel(
+            name=f"ticket-{user.name}",
+            overwrites=overwrites,
+            category=self.target_channel.category
+        )
+
         boxed_title = make_boxed_title("NOUVEAU TICKET OUVERT", "🎫")
         message = (
             f"{boxed_title}\n"
@@ -58,7 +78,10 @@ class TicketCategorySelect(discord.ui.Select):
             "Merci de détailler votre demande. Un membre de l'équipe vous répondra sous 24-48h."
         )
         await channel.send(content=ping, content=message)
-        await interaction.response.send_message(f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}", ephemeral=False)
+        await interaction.response.send_message(
+            f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}",
+            ephemeral=False
+        )
 
 class TicketView(discord.ui.View):
     def __init__(self, config, target_channel):
@@ -72,7 +95,14 @@ class TicketSystem(commands.Cog):
         self.config = load_json(self.config_path, {})
 
     def get_guild_config(self, guild_id):
-        return self.config.get(str(guild_id), {"categories": [{"name": "Support", "description": "Besoin d'aide ?", "emoji": "❓"}, {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}], "footer": "By Delmaga", "ping_role": None})
+        return self.config.get(str(guild_id), {
+            "categories": [
+                {"name": "Support", "description": "Besoin d'aide ?", "emoji": "❓"},
+                {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}
+            ],
+            "footer": "By Delmaga",
+            "ping_role": None
+        })
 
     def set_guild_config(self, guild_id, data):
         self.config[str(guild_id)] = data
