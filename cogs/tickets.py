@@ -62,6 +62,14 @@ class TicketActionView(discord.ui.View):
         except:
             pass
 
+def make_boxed_title(title, icon="🎫"):
+    full_title = f"{icon} {title}"
+    width = max(len(full_title), 30)
+    top = "┌" + "─" * width + "┐"
+    middle = "│ " + full_title.ljust(width - 1) + "│"
+    bottom = "└" + "─" * width + "┘"
+    return f"```\n{top}\n{middle}\n{bottom}\n```"
+
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
         options = [discord.SelectOption(label=cat["name"], description=cat["description"][:100], emoji=cat["emoji"]) for cat in config["categories"]]
@@ -85,22 +93,21 @@ class TicketCategorySelect(discord.ui.Select):
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                 ping = f"🔔 {role.mention}"
         channel = await guild.create_text_channel(f"ticket-{user.name}", overwrites=overwrites, category=self.target_channel.category)
+        boxed_title = make_boxed_title("NOUVEAU TICKET OUVERT", "🎫")
         embed = discord.Embed(
-            title="",
             description=(
-                "```ansi\n"
-                "[2;34m┌──────────────────────────────┐[0m\n"
-                "[2;34m│ [0m🎫 [1;36mNOUVEAU TICKET OUVERT [0m[2;34m │[0m\n"
-                "[2;34m└──────────────────────────────┘[0m\n"
-                "```"
+                f"{boxed_title}\n"
+                f"**Catégorie** : {category['name']}\n"
+                f"**Utilisateur** : {user.mention}\n"
+                f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
+                "Merci de détailler votre demande. Un membre de l'équipe vous répondra sous 24-48h."
             ),
-            color=0x2b2d31
+            color=0x000000  # Noir → fond transparent sur fond Discord
         )
-        embed.add_field(name="📋 Informations", value=f"**Catégorie** : {category['name']}\n**Utilisateur** : {user.mention}\n**Heure** : <t:{int(datetime.now().timestamp())}:F>", inline=False)
-        embed.add_field(name="📝 Instructions", value="• Soyez précis dans votre demande\n• Un membre de l'équipe vous répondra sous 24-48h.", inline=False)
         if guild.icon: embed.set_thumbnail(url=guild.icon.url)
         embed.set_footer(text=f"By {self.config['footer']}")
-        await channel.send(content=ping, embed=embed)
+        file = discord.File("data/banner.png", filename="banner.png")
+        await channel.send(content=ping, embed=embed, file=file)
         await channel.send("**🛠️ Actions disponibles :**", view=TicketActionView())
         await interaction.response.send_message(f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}", ephemeral=False)
 
@@ -128,21 +135,16 @@ class TicketSystem(commands.Cog):
         if not config["categories"]:
             await ctx.respond("❌ Aucune catégorie configurée.", ephemeral=False)
             return
+        boxed_title = make_boxed_title("CENTRE D'ASSISTANCE", "🎫")
         embed = discord.Embed(
-            title="",
-            description=(
-                "```ansi\n"
-                "[2;34m┌──────────────────────────────┐[0m\n"
-                "[2;34m│ [0m🎫 [1;36mCENTRE D'ASSISTANCE [0m[2;34m │[0m\n"
-                "[2;34m└──────────────────────────────┘[0m\n"
-                "```"
-            ),
-            color=0x2b2d31
+            description=f"{boxed_title}\nSélectionnez une catégorie ci-dessous pour ouvrir un ticket.",
+            color=0x000000
         )
         if ctx.guild.icon: embed.set_thumbnail(url=ctx.guild.icon.url)
         embed.set_footer(text=f"By {config['footer']}")
         view = TicketView(config, ctx.channel)
-        await ctx.respond(embed=embed, view=view, ephemeral=False)
+        file = discord.File("data/banner.png", filename="banner.png")
+        await ctx.respond(embed=embed, view=view, file=file, ephemeral=False)
 
     @discord.slash_command(name="ticket_category_add")
     @commands.has_permissions(administrator=True)
