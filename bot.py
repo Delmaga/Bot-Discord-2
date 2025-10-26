@@ -9,17 +9,16 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)
+bot = discord.Bot(intents=intents)  # ← Obligatoire pour les slash commands
 
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} est en ligne sur {len(bot.guilds)} serveur(s).")
+    print(f"✅ {bot.user} est en ligne.")
     try:
         synced = await bot.tree.sync()
         print(f"🌐 {len(synced)} commandes synchronisées.")
     except Exception as e:
-        print(f"❌ Erreur de synchronisation : {e}")
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name="Visual Studio Code"))
+        print(f"❌ Erreur sync : {e}")
 
 # Charger les cogs
 for filename in os.listdir("./cogs"):
