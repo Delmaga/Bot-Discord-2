@@ -38,7 +38,7 @@ class LogsSystem(commands.Cog):
 
     logs = discord.SlashCommandGroup("logs", "Configurer les salons de logs")
 
-    @logs.command(name="message", description="Salon pour les logs de messages")
+    @logs.command(name="message")
     @commands.has_permissions(administrator=True)
     async def message(self, ctx, salon: discord.TextChannel):
         gid = str(ctx.guild.id)
@@ -46,13 +46,9 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["message"] = str(salon.id)
         save_json(self.config_path, self.config)
-        embed = discord.Embed(
-            description=f"✅ **Logs messages** → {salon.mention}",
-            color=0x57F287
-        )
-        await ctx.respond(embed=embed, ephemeral=False)
+        await ctx.respond(f"✅ Logs messages → {salon.mention}", ephemeral=False)
 
-    @logs.command(name="modération", description="Salon pour les logs de modération")
+    @logs.command(name="modération")
     @commands.has_permissions(administrator=True)
     async def moderation(self, ctx, salon: discord.TextChannel):
         gid = str(ctx.guild.id)
@@ -60,13 +56,9 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["moderation"] = str(salon.id)
         save_json(self.config_path, self.config)
-        embed = discord.Embed(
-            description=f"✅ **Logs modération** → {salon.mention}",
-            color=0x57F287
-        )
-        await ctx.respond(embed=embed, ephemeral=False)
+        await ctx.respond(f"✅ Logs modération → {salon.mention}", ephemeral=False)
 
-    @logs.command(name="ticket", description="Salon pour les logs de tickets")
+    @logs.command(name="ticket")
     @commands.has_permissions(administrator=True)
     async def ticket(self, ctx, salon: discord.TextChannel):
         gid = str(ctx.guild.id)
@@ -74,41 +66,21 @@ class LogsSystem(commands.Cog):
             self.config[gid] = {}
         self.config[gid]["ticket"] = str(salon.id)
         save_json(self.config_path, self.config)
-        embed = discord.Embed(
-            description=f"✅ **Logs tickets** → {salon.mention}",
-            color=0x57F287
-        )
-        await ctx.respond(embed=embed, ephemeral=False)
+        await ctx.respond(f"✅ Logs tickets → {salon.mention}", ephemeral=False)
 
-    # ========== LOGS MESSAGES ==========
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return
         embed = discord.Embed(
-            title="",
-            description="```ansi\n"
-                        "[2;34m┌──────────────────────────────┐[0m\n"
-                        "[2;34m│ [0m📥 [1;36mMESSAGE ENVOYÉ [0m[2;34m │[0m\n"
-                        "[2;34m└──────────────────────────────┘[0m\n"
-                        "```",
+            description=(
+                f"📥 **Message envoyé**\n"
+                f"**Auteur** : {message.author.mention}\n"
+                f"**Salon** : {message.channel.mention}\n"
+                f"**Contenu** : {message.content[:1000]}"
+            ),
             color=0x2b2d31,
             timestamp=datetime.utcnow()
-        )
-        embed.add_field(
-            name="```ansi\n[2;37m👤 AUTEUR[0m```",
-            value=f"{message.author.mention}",
-            inline=True
-        )
-        embed.add_field(
-            name="```ansi\n[2;37m# SALON[0m```",
-            value=f"{message.channel.mention}",
-            inline=True
-        )
-        embed.add_field(
-            name="```ansi\n[2;37m💬 CONTENU[0m```",
-            value=f"```{message.content[:500]}```" if message.content else "*(Pièce jointe)*",
-            inline=False
         )
         embed.set_footer(text=f"ID: {message.id}")
         await self.send_log(message.guild.id, "message", embed)
@@ -118,18 +90,15 @@ class LogsSystem(commands.Cog):
         if before.author.bot or not before.guild or before.content == after.content:
             return
         embed = discord.Embed(
-            title="",
-            description="```ansi\n"
-                        "[2;34m┌──────────────────────────────┐[0m\n"
-                        "[2;34m│ [0m✏️ [1;36mMESSAGE MODIFIÉ [0m[2;34m │[0m\n"
-                        "[2;34m└──────────────────────────────┘[0m\n"
-                        "```",
-            color=0xFEE75C,
+            description=(
+                f"✏️ **Message modifié**\n"
+                f"**Auteur** : {before.author.mention}\n"
+                f"**Avant** : {before.content[:500]}\n"
+                f"**Après** : {after.content[:500]}"
+            ),
+            color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
-        embed.add_field(name="```ansi\n[2;37mAvant[0m```", value=f"```{before.content[:250]}```", inline=False)
-        embed.add_field(name="```ansi\n[2;37mAprès[0m```", value=f"```{after.content[:250]}```", inline=False)
-        embed.set_footer(text=f"Auteur: {before.author} • ID: {before.id}")
         await self.send_log(before.guild.id, "message", embed)
 
     @commands.Cog.listener()
@@ -137,54 +106,36 @@ class LogsSystem(commands.Cog):
         if message.author.bot or not message.guild:
             return
         embed = discord.Embed(
-            title="",
-            description="```ansi\n"
-                        "[2;34m┌──────────────────────────────┐[0m\n"
-                        "[2;34m│ [0m🗑️ [1;36mMESSAGE SUPPRIMÉ [0m[2;34m │[0m\n"
-                        "[2;34m└──────────────────────────────┘[0m\n"
-                        "```",
-            color=0xED4245,
+            description=(
+                f"🗑️ **Message supprimé**\n"
+                f"**Auteur** : {message.author.mention}\n"
+                f"**Salon** : {message.channel.mention}\n"
+                f"**Contenu** : {message.content[:1000]}"
+            ),
+            color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
-        embed.add_field(name="```ansi\n[2;37mAuteur[0m```", value=message.author.mention, inline=True)
-        embed.add_field(name="```ansi\n[2;37mSalon[0m```", value=message.channel.mention, inline=True)
-        embed.add_field(name="```ansi\n[2;37mContenu[0m```", value=f"```{message.content[:500]}```", inline=False)
         embed.set_footer(text=f"ID: {message.id}")
         await self.send_log(message.guild.id, "message", embed)
 
-    # ========== LOGS MODÉRATION ==========
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
         if not hasattr(channel, 'guild'):
             return
         embed = discord.Embed(
-            title="",
-            description="```ansi\n"
-                        "[2;34m┌──────────────────────────────┐[0m\n"
-                        "[2;34m│ [0m🆕 [1;36mSALON CRÉÉ [0m[2;34m │[0m\n"
-                        "[2;34m└──────────────────────────────┘[0m\n"
-                        "```",
-            color=0x57F287,
+            description=f"🆕 **Salon créé** : `{channel.name}`",
+            color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
-        embed.add_field(name="```ansi\n[2;37mNom[0m```", value=f"`{channel.name}`", inline=True)
-        embed.add_field(name="```ansi\n[2;37mType[0m```", value=type(channel).__name__, inline=True)
         await self.send_log(channel.guild.id, "moderation", embed)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
         embed = discord.Embed(
-            title="",
-            description="```ansi\n"
-                        "[2;34m┌──────────────────────────────┐[0m\n"
-                        "[2;34m│ [0m➕ [1;36mRÔLE CRÉÉ [0m[2;34m │[0m\n"
-                        "[2;34m└──────────────────────────────┘[0m\n"
-                        "```",
-            color=0x57F287,
+            description=f"➕ **Rôle créé** : {role.mention}",
+            color=0x2b2d31,
             timestamp=datetime.utcnow()
         )
-        embed.add_field(name="```ansi\n[2;37mRôle[0m```", value=role.mention, inline=True)
-        embed.add_field(name="```ansi\n[2;37mCouleur[0m```", value=str(role.color), inline=True)
         await self.send_log(role.guild.id, "moderation", embed)
 
 def setup(bot):
