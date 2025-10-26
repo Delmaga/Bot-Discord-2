@@ -1,31 +1,18 @@
 # bot.py
 import os
 import discord
-import sys
 
 TOKEN = os.getenv("TOKEN")
-if not TOKEN:
-    print("❌ ERREUR : TOKEN manquant.", file=sys.stderr)
-    sys.exit(1)
-
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)  # ← Défini ici, une seule fois
+bot = discord.Bot(intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} est en ligne.")
-    try:
-        synced = await bot.tree.sync()
-        print(f"🌐 {len(synced)} commandes synchronisées.")
-    except Exception as e:
-        print(f"❌ Erreur sync : {e}")
+    print("✅ Bot en ligne")
+    await bot.tree.sync()  # ← Fonctionne uniquement avec discord.Bot
 
-for filename in os.listdir("./cogs"):
-    if filename.endswith(".py") and filename != "__init__.py":
-        try:
-            bot.load_extension(f"cogs.{filename[:-3]}")
-            print(f"📦 Cog chargé : {filename}")
-        except Exception as e:
-            print(f"❌ Erreur dans {filename}: {e}")
+@bot.slash_command()
+async def test(ctx):
+    await ctx.respond("✅ Ça marche !")
 
 bot.run(TOKEN)
