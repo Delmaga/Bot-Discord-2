@@ -18,14 +18,6 @@ def save_json(path, data):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-def make_boxed_title(title, icon="🎫"):
-    full_title = f"{icon} {title}"
-    width = max(len(full_title), 30)
-    top = "┌" + "─" * width + "┐"
-    middle = "│ " + full_title.ljust(width - 1) + "│"
-    bottom = "└" + "─" * width + "┘"
-    return f"```\n{top}\n{middle}\n{bottom}\n```"
-
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
         options = [
@@ -69,13 +61,14 @@ class TicketCategorySelect(discord.ui.Select):
             category=self.target_channel.category
         )
 
-        boxed_title = make_boxed_title("NOUVEAU TICKET OUVERT", "🎫")
         message = (
-            f"{boxed_title}\n"
+            f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
             f"**Catégorie** : {category['name']}\n"
             f"**Utilisateur** : {user.mention}\n"
             f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
-            "Merci de détailler votre demande. Un membre de l'équipe vous répondra sous 24-48h."
+            "Merci de détailler votre demande ci-dessous.  
+Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n\n"
+            "────────────────────────────────"
         )
 
         full_content = f"{ping}\n{message}" if ping else message
@@ -100,8 +93,9 @@ class TicketSystem(commands.Cog):
     def get_guild_config(self, guild_id):
         return self.config.get(str(guild_id), {
             "categories": [
-                {"name": "Support", "description": "Besoin d'aide ?", "emoji": "❓"},
-                {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}
+                {"name": "Support", "description": "Besoin d'aide ou d'assistance", "emoji": "💬"},
+                {"name": "Bug", "description": "Signaler un dysfonctionnement", "emoji": "🐛"},
+                {"name": "Autre", "description": "Toute autre demande", "emoji": "📝"}
             ],
             "footer": "By Delmaga",
             "ping_role": None
@@ -119,8 +113,19 @@ class TicketSystem(commands.Cog):
         if not config["categories"]:
             await ctx.respond("❌ Aucune catégorie configurée.", ephemeral=False)
             return
-        boxed_title = make_boxed_title("CENTRE D'ASSISTANCE", "🎫")
-        message = f"{boxed_title}\nSélectionnez une catégorie ci-dessous pour ouvrir un ticket."
+
+        message = (
+            "🎫 **CENTRE D’ASSISTANCE**\n\n"
+            "Bienvenue dans notre centre d’assistance officiel.\n"
+            "Veuillez sélectionner une catégorie ci-dessous en fonction de votre besoin :\n\n"
+        )
+
+        for cat in config["categories"]:
+            message += f" • {cat['emoji']} **{cat['name']}** — {cat['description']}\n"
+
+        message += "\nUn membre de l’équipe vous répondra sous **24 à 48 heures**.\n"
+        message += "Merci de votre patience et de votre confiance."
+
         view = TicketView(config, ctx.channel)
         await ctx.respond(message, view=view, ephemeral=False)
 
