@@ -61,15 +61,16 @@ class TicketCategorySelect(discord.ui.Select):
             category=self.target_channel.category
         )
 
-        message = (
-            f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
-            f"**Catégorie** : {category['name']}\n"
-            f"**Utilisateur** : {user.mention}\n"
-            f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
-            "Merci de détailler votre demande ci-dessous.  
-            "Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n\n"
-            "────────────────────────────────"
-        )
+        message = f"""🟦 **NOUVEAU TICKET OUVERT**
+
+        **Catégorie** : {category['name']}
+        **Utilisateur** : {user.mention}
+        **Heure** : <t:{int(datetime.now().timestamp())}:F>
+
+        Merci de détailler votre demande ci-dessous.
+        Un membre de l’équipe vous répondra sous **24 à 48 heures**.
+
+        ────────────────────────────────"""
 
         full_content = f"{ping}\n{message}" if ping else message
         await channel.send(content=full_content)
