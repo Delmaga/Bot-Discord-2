@@ -67,7 +67,7 @@ class TicketCategorySelect(discord.ui.Select):
             f"**Utilisateur** : {user.mention}\n"
             f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
             "Merci de détailler votre demande ci-dessous.  
-Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n\n"
+            "Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n\n"
             "────────────────────────────────"
         )
 
