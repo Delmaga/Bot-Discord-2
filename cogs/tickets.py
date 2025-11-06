@@ -110,17 +110,18 @@ class TicketCategorySelect(discord.ui.Select):
             category=self.target_channel.category
         )
 
-        embed = discord.Embed(
-            description=(
-                f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
-                f"**Catégorie** : {category['name']}\n"
-                f"**Utilisateur** : {user.mention}\n"
-                f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
-                "Merci de détailler votre demande ci-dessous.  
-                "Un membre de l’équipe vous répondra sous **24 à 48 heures**."
-            ),
+        message = f"""🟦 **NOUVEAU TICKET OUVERT**
+
+        **Catégorie** : {category['name']}
+        **Utilisateur** : {user.mention}
+        **Heure** : <t:{int(datetime.now().timestamp())}:F>
+
+        Merci de détailler votre demande ci-dessous.
+        Un membre de l’équipe vous répondra sous **24 à 48 heures**.
+
+        ────────────────────────────────"""
             color=0x36393f  # Gris doux = fond intégré
-        )
+            
         embed.set_footer(text=f"By {self.config['footer']}")
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
