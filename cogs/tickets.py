@@ -18,7 +18,6 @@ def save_json(path, data):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-# ========== BOUTONS D'ACTION DANS LE TICKET ==========
 class TicketActionView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -44,13 +43,10 @@ class TicketActionView(discord.ui.View):
         if not messages:
             return await interaction.response.send_message("📭 Aucun message à transcrire.", ephemeral=True)
         try:
-            await interaction.user.send(
-                f"**📄 Transcript du ticket : {interaction.channel.name}**\n```txt\n" +
-                "\n".join(messages)[:1900] + "\n```"
-            )
+            await interaction.user.send(f"**📄 Transcript**\n```txt\n" + "\n".join(messages)[:1900] + "\n```")
             await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
         except:
-            await interaction.response.send_message("❌ Impossible d'envoyer un MP.", ephemeral=True)
+            await interaction.response.send_message("❌ Vos MP sont fermés.", ephemeral=True)
 
     @discord.ui.button(label="Fermer", style=discord.ButtonStyle.danger, emoji="🔒")
     async def close_ticket(self, button, interaction):
@@ -66,7 +62,6 @@ class TicketActionView(discord.ui.View):
         except:
             pass
 
-# ========== MENU DÉROULANT ==========
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
         options = [
@@ -97,12 +92,13 @@ class TicketCategorySelect(discord.ui.Select):
             guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
         }
 
-        ping = ""
+        # Ajouter le rôle staff aux permissions
+        ping_content = ""
         if self.config.get("ping_role"):
             role = guild.get_role(self.config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                ping = f"🔔 {role.mention}"
+                ping_content = f"{role.mention}"  # ← Mention DANS le message
 
         channel = await guild.create_text_channel(
             name=f"ticket-{user.name}",
@@ -110,23 +106,24 @@ class TicketCategorySelect(discord.ui.Select):
             category=self.target_channel.category
         )
 
-        message = f"""🟦 **NOUVEAU TICKET OUVERT**
-
-        **Catégorie** : {category['name']}
-        **Utilisateur** : {user.mention}
-        **Heure** : <t:{int(datetime.now().timestamp())}:F>
-
-        Merci de détailler votre demande ci-dessous.
-        Un membre de l’équipe vous répondra sous **24 à 48 heures**.
-
-        ────────────────────────────────"""
-            color=0x36393f  # Gris doux = fond intégré
-            
+        # Embed du ticket
+        embed = discord.Embed(
+            description=(
+                f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
+                f"**Catégorie** : {category['name']}\n"
+                f"**Utilisateur** : {user.mention}\n"
+                f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
+                "Merci de détailler votre demande ci-dessous.  
+Un membre de l’équipe vous répondra sous **24 à 48 heures**."
+            ),
+            color=0x36393f
+        )
         embed.set_footer(text=f"By {self.config['footer']}")
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        await channel.send(content=ping, embed=embed)
+        # Envoi du message DANS le salon du ticket, avec la mention DU RÔLE
+        await channel.send(content=ping_content, embed=embed)
         await channel.send("**🛠️ Actions disponibles :**", view=TicketActionView())
 
         await interaction.response.send_message(
@@ -139,7 +136,6 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=300)
         self.add_item(TicketCategorySelect(config, target_channel))
 
-# ========== COG PRINCIPAL ==========
 class TicketSystem(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -169,7 +165,6 @@ class TicketSystem(commands.Cog):
         if not config["categories"]:
             await ctx.respond("❌ Aucune catégorie configurée.", ephemeral=False)
             return
-
         embed = discord.Embed(
             description=(
                 "🎫 **CENTRE D’ASSISTANCE**\n\n"
@@ -182,17 +177,8 @@ class TicketSystem(commands.Cog):
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon.url)
         embed.set_footer(text=f"By {config['footer']}")
-
         view = TicketView(config, ctx.channel)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
-
-    @ticket.command(name="category_add", description="Ajouter une catégorie")
-    @commands.has_permissions(administrator=True)
-    async def ticket_category_add(self, ctx, nom: str, description: str, emoji: str):
-        config = self.get_guild_config(ctx.guild.id)
-        config["categories"].append({"name": nom, "description": description, "emoji": emoji})
-        self.set_guild_config(ctx.guild.id, config)
-        await ctx.respond(f"✅ Catégorie `{nom}` ajoutée.", ephemeral=False)
 
     @ticket.command(name="ping", description="Définir le rôle à mentionner")
     @commands.has_permissions(administrator=True)
@@ -201,6 +187,14 @@ class TicketSystem(commands.Cog):
         config["ping_role"] = role.id
         self.set_guild_config(ctx.guild.id, config)
         await ctx.respond(f"✅ Rôle de ping : {role.mention}", ephemeral=False)
+
+    @ticket.command(name="category_add", description="Ajouter une catégorie")
+    @commands.has_permissions(administrator=True)
+    async def ticket_category_add(self, ctx, nom: str, description: str, emoji: str):
+        config = self.get_guild_config(ctx.guild.id)
+        config["categories"].append({"name": nom, "description": description, "emoji": emoji})
+        self.set_guild_config(ctx.guild.id, config)
+        await ctx.respond(f"✅ Catégorie `{nom}` ajoutée.", ephemeral=False)
 
     @ticket.command(name="footer", description="Modifier le footer")
     @commands.has_permissions(administrator=True)
