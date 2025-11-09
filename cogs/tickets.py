@@ -64,14 +64,13 @@ class TicketActionView(discord.ui.View):
 
 class TicketCategorySelect(discord.ui.Select):
     def __init__(self, config, target_channel):
-        options = [
-            discord.SelectOption(
+        options = []
+        for cat in config["categories"]:
+            options.append(discord.SelectOption(
                 label=cat["name"],
                 description=cat["description"][:100],
                 emoji=cat["emoji"]
-            )
-            for cat in config["categories"]
-        ]
+            ))
         super().__init__(placeholder="Veuillez sélectionner une catégorie", options=options)
         self.config = config
         self.target_channel = target_channel
@@ -92,13 +91,12 @@ class TicketCategorySelect(discord.ui.Select):
             guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
         }
 
-        # Ajouter le rôle staff aux permissions
         ping_content = ""
         if self.config.get("ping_role"):
             role = guild.get_role(self.config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                ping_content = f"{role.mention}"  # ← Mention DANS le message
+                ping_content = f"{role.mention}"
 
         channel = await guild.create_text_channel(
             name=f"ticket-{user.name}",
@@ -106,30 +104,24 @@ class TicketCategorySelect(discord.ui.Select):
             category=self.target_channel.category
         )
 
-        # Embed du ticket
         embed = discord.Embed(
-            description=(
-                f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
-                f"**Catégorie** : {category['name']}\n"
-                f"**Utilisateur** : {user.mention}\n"
-                f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
-                "Merci de détailler votre demande ci-dessous.  
-Un membre de l’équipe vous répondra sous **24 à 48 heures**."
-            ),
+            description=f"""🎫 **NOUVEAU TICKET OUVERT**
+
+**Catégorie** : {category['name']}
+**Utilisateur** : {user.mention}
+**Heure** : <t:{int(datetime.now().timestamp())}:F>
+
+Merci de détailler votre demande ci-dessous.  
+Un membre de l’équipe vous répondra sous **24 à 48 heures**.""",
             color=0x36393f
         )
         embed.set_footer(text=f"By {self.config['footer']}")
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        # Envoi du message DANS le salon du ticket, avec la mention DU RÔLE
         await channel.send(content=ping_content, embed=embed)
         await channel.send("**🛠️ Actions disponibles :**", view=TicketActionView())
-
-        await interaction.response.send_message(
-            f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}",
-            ephemeral=False
-        )
+        await interaction.response.send_message(f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}", ephemeral=False)
 
 class TicketView(discord.ui.View):
     def __init__(self, config, target_channel):
@@ -166,12 +158,12 @@ class TicketSystem(commands.Cog):
             await ctx.respond("❌ Aucune catégorie configurée.", ephemeral=False)
             return
         embed = discord.Embed(
-            description=(
-                "🎫 **CENTRE D’ASSISTANCE**\n\n"
-                "Veuillez sélectionner une catégorie ci-dessous pour ouvrir un ticket.\n\n"
-                "Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n"
-                "Merci de votre patience."
-            ),
+            description="""🎫 **CENTRE D’ASSISTANCE**
+
+Veuillez sélectionner une catégorie ci-dessous pour ouvrir un ticket.
+
+Un membre de l’équipe vous répondra sous **24 à 48 heures**.
+Merci de votre patience.""",
             color=0x36393f
         )
         if ctx.guild.icon:
