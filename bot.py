@@ -9,11 +9,11 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)  # ← OBLIGATOIRE
+bot = discord.Bot(intents=intents)  # ← CECI EST OBLIGATOIRE
 
 @bot.event
 async def on_ready():
-    print(f"✅ {bot.user} en ligne.")
+    print("✅ Gestion Seïko#3167 en ligne.")
     synced = await bot.tree.sync()
     print(f"🌐 {len(synced)} commandes synchronisées.")
 
