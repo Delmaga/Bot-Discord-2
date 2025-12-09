@@ -8,49 +8,21 @@ import asyncio
 
 def load_data():
     os.makedirs("data", exist_ok=True)
-    path = "data/tickets_seiko_v6.json"
+    path = "data/tickets_seiko_v8.json"
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"config": {}, "tickets": {}}
 
 def save_data(data):
-    with open("data/tickets_seiko_v6.json", "w", encoding="utf-8") as f:
+    with open("data/tickets_seiko_v8.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-
-class TicketHandler(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.data = load_data()
-        self.cleanup_old_tickets.start()
-
-    def cog_unload(self):
-        self.cleanup_old_tickets.cancel()
-
-    @tasks.loop(hours=1)
-    async def cleanup_old_tickets(self):
-        now = datetime.now(timezone.utc)
-        to_delete = []
-        for ch_id, ticket in self.data["tickets"].items():
-            if ticket["state"] == "CLOSED":
-                close_time = datetime.fromisoformat(ticket["closed_at"])
-                if (now - close_time) > timedelta(hours=24):
-                    to_delete.append(ch_id)
-        for ch_id in to_delete:
-            try:
-                channel = self.bot.get_channel(int(ch_id))
-                if channel:
-                    await channel.delete(reason="[SEÏKO] Nettoyage auto 24h")
-                self.data["tickets"].pop(ch_id, None)
-                save_data(self.data)
-            except:
-                pass
 
 class TicketSystem(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="ticket", description="Ouvrir un ticket via menu")
+    @discord.slash_command(name="ticket", description="Ouvrir un ticket")
     async def ticket(self, ctx):
         data = load_data()
         guild_id = str(ctx.guild.id)
@@ -62,32 +34,34 @@ class TicketSystem(commands.Cog):
                     {"name": "Autre", "description": "Toute autre demande", "emoji": "📝"}
                 ],
                 "ping_role": None,
-                "transcript_channel": None,
-                "footer": "By Seïko"
+                "transcript_channel": None
             }
             save_data(data)
 
         config = data["config"][guild_id]
-        options = []
-        for cat in config["categories"]:
-            options.append(
-                discord.SelectOption(
-                    label=cat["name"],
-                    description=cat["description"],
-                    emoji=cat["emoji"]
-                )
-            )
+        options = [discord.SelectOption(label=cat["name"], description=cat["description"], emoji=cat["emoji"]) for cat in config["categories"]]
 
-        select = discord.ui.Select(
-            placeholder="Veuillez sélectionner une catégorie",
-            options=options
-        )
+        select = discord.ui.Select(placeholder="Sélectionnez une catégorie", options=options)
 
         async def select_callback(interaction):
             category = interaction.data['values'][0]
             if interaction.user != ctx.author:
-                await interaction.response.send_message("❌ Ce ticket est privé.", ephemeral=True)
+                await interaction.response.send_message("🔒 Accès restreint.", ephemeral=True)
                 return
+
+            # ✅ Chargement 0–100% (éphémère)
+            progress_msg = await interaction.response.send_message("```\n[░░░░░░░░░░] 0% — Initialisation...\n```", ephemeral=True)
+            for i in range(1, 11):
+                await asyncio.sleep(0.1)
+                bars = "█" * i + "░" * (10 - i)
+                pct = i * 10
+                await interaction.edit_original_response(content=f"```\n[{bars}] {pct}% — Création du ticket...\n```")
+            await asyncio.sleep(0.2)
+            await interaction.edit_original_response(content="```\n[██████████] 100% — Ticket créé !\n```")
+            await asyncio.sleep(1)
+            await interaction.delete_original_response()
+
+            # ✅ Création du salon
             guild = interaction.guild
             user = interaction.user
 
@@ -104,157 +78,86 @@ class TicketSystem(commands.Cog):
                     overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                     ping_line = f"{role.mention}"
 
-            channel = await guild.create_text_channel(
-                name=f"ticket-{user.name}",
-                overwrites=overwrites,
-                reason=f"Ticket ouvert par {user}"
-            )
+            # ✅ Nom = Catégorie-ID
+            channel = await guild.create_text_channel(f"{category}-{interaction.channel.id}", overwrites=overwrites)
 
             ticket_id = str(channel.id)
             data["tickets"][ticket_id] = {
                 "user_id": str(user.id),
                 "category": category,
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                "state": "OPEN"
+                "state": "OPEN",
+                "channel_id": ticket_id
             }
             save_data(data)
 
-            # ✅ Texte en gras (sans backticks)
-            message_lines = [
-                "🟦 **TICKET — Seïko**",
-                ping_line,
-                "───────────────────────────────────────",
-                f"📁 Catégorie : **{category}**",
-                f"👤 Utilisateur : **{user.name}**",
-                f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
-                "───────────────────────────────────────",
-                "▶️ En attente de prise en charge...",
-                "",
-                "Merci de détailler votre demande.",
-                "Un membre du staff vous répondra sous 24-48h."
-            ]
+            # ✅ Message dans le ticket (backticks only)
+            msg = (
+                "```\n"
+                "TICKET — SEÏKO v8.0\n"
+                "────────────────────\n"
+                f"Catégorie : {category}\n"
+                f"Utilisateur : {user.name}\n"
+                f"Heure : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                "────────────────────\n"
+                "En attente de prise en charge...\n"
+                "```\n"
+                "Merci de détailler votre demande. Réponse sous 24-48h."
+            )
+            await channel.send(content=ping_line)
+            await channel.send(msg)
 
-            await channel.send(content="\n".join(message_lines))
-
-            async def claim_callback(interaction):
-                if not interaction.user.guild_permissions.manage_channels:
-                    await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
+            # ✅ Bouton Fermer
+            async def close_callback(i):
+                if not i.user.guild_permissions.manage_channels:
+                    await i.response.send_message("❌ Staff only.", ephemeral=True)
                     return
-                await interaction.channel.send(f"🔷 **{interaction.user.mention} a pris en charge ce ticket.**")
-                await interaction.response.defer()
 
-            async def close_callback(interaction):
-                if not interaction.user.guild_permissions.manage_channels:
-                    await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
-                    return
-                await interaction.channel.edit(name=f"closed-{channel.name}")
-                await interaction.channel.send("🔒 Ce ticket sera supprimé dans **24 heures**.")
-                await interaction.response.defer()
-                await asyncio.sleep(86400)
+                await i.response.defer()
+                await i.channel.edit(name=f"closed-{i.channel.name}")
+
+                # ✅ Transfert du transcript
+                transcript_channel_id = config.get("transcript_channel")
+                if transcript_channel_id:
+                    transcript_ch = self.bot.get_channel(int(transcript_channel_id))
+                    if transcript_ch:
+                        messages = []
+                        async for msg in i.channel.history(limit=1000, oldest_first=True):
+                            if msg.type == discord.MessageType.default and not msg.author.bot:
+                                messages.append(f"[{msg.created_at.strftime('%H:%M')}] {msg.author}: {msg.content}")
+                        if messages:
+                            await transcript_ch.send(
+                                f"📄 **Transcript — Ticket `{ticket_id}`**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
+                            )
+
+                # ✅ Barre de suppression 24h (message public)
+                progress = await i.channel.send("```\n[░░░░░░░░░░] 0% — Suppression dans 24h...\n```")
+                total_steps = 24 * 4  # toutes les 15 min
+                for step in range(1, total_steps + 1):
+                    await asyncio.sleep(900)  # 15 min
+                    pct = int((step / total_steps) * 100)
+                    bars = "█" * (step) + "░" * (total_steps - step)
+                    try:
+                        await progress.edit(content=f"```\n[{bars[:10]}] {pct}% — Suppression en cours...\n```")
+                    except:
+                        break
                 try:
-                    await interaction.channel.delete()
+                    await i.channel.delete()
                 except:
                     pass
 
-                # ✅ Envoi du transcript
-                if config["transcript_channel"]:
-                    transcript_channel = self.bot.get_channel(int(config["transcript_channel"]))
-                    if transcript_channel:
-                        messages = []
-                        async for msg in interaction.channel.history(limit=1000, oldest_first=True):
-                            if msg.type == discord.MessageType.default and not msg.author.bot:
-                                messages.append(f"[{msg.created_at.strftime('%Y-%m-%d %H:%M')}] {msg.author}: {msg.content}")
-                        if messages:
-                            await transcript_channel.send(
-                                f"📄 **Transcript — Ticket {ticket_id}**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
-                            )
-
             view = discord.ui.View(timeout=None)
-            claim_btn = discord.ui.Button(label="Prendre en charge", style=discord.ButtonStyle.primary, emoji="👤")
-            close_btn = discord.ui.Button(label="Fermer", style=discord.ButtonStyle.danger, emoji="🔒")
-            claim_btn.callback = claim_callback
+            close_btn = discord.ui.Button(label="🔴 Fermer", style=discord.ButtonStyle.danger)
             close_btn.callback = close_callback
-            view.add_item(claim_btn)
             view.add_item(close_btn)
             await channel.send(view=view)
 
-            await interaction.response.send_message(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
+            await interaction.followup.send(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
 
         select.callback = select_callback
+        await ctx.respond("Sélectionnez une catégorie :", view=discord.ui.View().add_item(select), ephemeral=False)
 
-        embed = discord.Embed(
-            title="🎫 CENTRE D’ASSISTANCE",
-            description=(
-                "Veuillez sélectionner une catégorie ci-dessous pour ouvrir un ticket.\n\n"
-                "Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n"
-                "Merci de votre patience."
-            ),
-            color=0x2b2d31
-        )
-        embed.set_footer(text=config["footer"])
-        if ctx.guild.icon:
-            embed.set_thumbnail(url=ctx.guild.icon.url)
-
-        view = discord.ui.View(timeout=300)
-        view.add_item(select)
-        await ctx.respond(embed=embed, view=view, ephemeral=False)
-
-    # ✅ COMMANDE 1 : /ticket_create avec salon cible
-    @discord.slash_command(name="ticket_create", description="Créer un ticket dans un salon spécifique")
-    async def ticket_create(self, ctx, salon: discord.TextChannel, category: discord.Option(str, choices=["Support", "Bug", "Autre"])):
-        data = load_data()
-        guild_id = str(ctx.guild.id)
-        if guild_id not in data["config"]:
-            data["config"][guild_id] = {"categories": [], "ping_role": None}
-        config = data["config"][guild_id]
-
-        overwrites = {
-            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            ctx.author: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            ctx.guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
-        }
-
-        ping_line = ""
-        if config["ping_role"]:
-            role = ctx.guild.get_role(config["ping_role"])
-            if role:
-                overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                ping_line = f"{role.mention}"
-
-        channel = await ctx.guild.create_text_channel(
-            name=f"ticket-{ctx.author.name}",
-            overwrites=overwrites,
-            category=salon.category
-        )
-
-        ticket_id = str(channel.id)
-        data["tickets"][ticket_id] = {
-            "user_id": str(ctx.author.id),
-            "category": category,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "state": "OPEN"
-        }
-        save_data(data)
-
-        message_lines = [
-            "🟦 **TICKET — Seïko**",
-            ping_line,
-            "───────────────────────────────────────",
-            f"📁 Catégorie : **{category}**",
-            f"👤 Utilisateur : **{ctx.author.name}**",
-            f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
-            "───────────────────────────────────────",
-            "▶️ En attente de prise en charge...",
-            "",
-            "Merci de détailler votre demande.",
-            "Un membre du staff vous répondra sous 24-48h."
-        ]
-
-        await channel.send(content="\n".join(message_lines))
-        await ctx.respond(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
-
-    # ✅ COMMANDE 2 : /ticket_transcript
-    @discord.slash_command(name="ticket_transcript", description="Définir le salon pour les transcripts automatiques")
+    @discord.slash_command(name="ticket_transcript", description="Définir le salon pour les transcripts")
     @commands.has_permissions(administrator=True)
     async def ticket_transcript(self, ctx, salon: discord.TextChannel):
         data = load_data()
@@ -263,7 +166,7 @@ class TicketSystem(commands.Cog):
             data["config"][guild_id] = {}
         data["config"][guild_id]["transcript_channel"] = str(salon.id)
         save_data(data)
-        await ctx.respond(f"✅ Transcripts automatiques activés dans {salon.mention}.", ephemeral=False)
+        await ctx.respond(f"✅ Transcripts activés dans {salon.mention}.", ephemeral=False)
 
     @discord.slash_command(name="ticket_category_add", description="Ajouter une catégorie")
     @commands.has_permissions(administrator=True)
@@ -311,4 +214,3 @@ class TicketSystem(commands.Cog):
 
 def setup(bot):
     bot.add_cog(TicketSystem(bot))
-    bot.add_cog(TicketHandler(bot))
