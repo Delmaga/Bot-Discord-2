@@ -9,19 +9,20 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)  # ← CECI EST OBLIGATOIRE
+bot = discord.Bot(intents=intents)  # ← OBLIGATOIRE pour .tree
 
 @bot.event
 async def on_ready():
-    print("✅ Gestion Seïko#3167 en ligne.")
+    print("✅ Seïko en ligne.")
     synced = await bot.tree.sync()
     print(f"🌐 {len(synced)} commandes synchronisées.")
 
+# Charger les cogs
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py") and filename != "__init__.py":
         try:
             bot.load_extension(f"cogs.{filename[:-3]}")
         except Exception as e:
-            print(f"❌ Erreur {filename}: {e}")
+            print(f"❌ Erreur dans {filename}: {e}")
 
 bot.run(TOKEN)
