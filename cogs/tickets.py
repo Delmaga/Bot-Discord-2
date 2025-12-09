@@ -1,6 +1,6 @@
 # cogs/tickets.py — SEÏKO v4.0
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import json
 import os
 from datetime import datetime, timedelta
