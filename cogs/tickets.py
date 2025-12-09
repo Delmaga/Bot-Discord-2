@@ -1,9 +1,9 @@
 # cogs/tickets.py
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import asyncio
 
 def load_data():
@@ -49,19 +49,7 @@ class TicketSystem(commands.Cog):
                 await interaction.response.send_message("🔒 Accès restreint.", ephemeral=True)
                 return
 
-            # ✅ Chargement 0–100% (éphémère)
-            progress_msg = await interaction.response.send_message("```\n[░░░░░░░░░░] 0% — Initialisation...\n```", ephemeral=True)
-            for i in range(1, 11):
-                await asyncio.sleep(0.1)
-                bars = "█" * i + "░" * (10 - i)
-                pct = i * 10
-                await interaction.edit_original_response(content=f"```\n[{bars}] {pct}% — Création du ticket...\n```")
-            await asyncio.sleep(0.2)
-            await interaction.edit_original_response(content="```\n[██████████] 100% — Ticket créé !\n```")
-            await asyncio.sleep(1)
-            await interaction.delete_original_response()
-
-            # ✅ Création du salon
+            # ✅ Crée le salon immédiatement
             guild = interaction.guild
             user = interaction.user
 
@@ -71,6 +59,7 @@ class TicketSystem(commands.Cog):
                 guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
             }
 
+            # Rôle staff
             ping_line = ""
             if config["ping_role"]:
                 role = guild.get_role(config["ping_role"])
@@ -81,28 +70,32 @@ class TicketSystem(commands.Cog):
             # ✅ Nom = Catégorie-ID
             channel = await guild.create_text_channel(f"{category}-{interaction.channel.id}", overwrites=overwrites)
 
-            ticket_id = str(channel.id)
-            data["tickets"][ticket_id] = {
-                "user_id": str(user.id),
-                "category": category,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "state": "OPEN",
-                "channel_id": ticket_id
-            }
-            save_data(data)
+            # ✅ Répond dans le salon public (ne supprime pas le menu)
+            await interaction.response.send_message(f"✅ Ticket en cours de création : {channel.mention}", ephemeral=False)
 
-            # ✅ Message dans le ticket (backticks only)
+            # ✅ CHARGEMENT DANS LE SALON DU TICKET — 2 secondes, 0 → 100%
+            progress = await channel.send("```\n[░░░░░░░░░░] 0% — Initialisation...\n```")
+            for i in range(1, 11):
+                await asyncio.sleep(0.2)  # 10 étapes × 0.2s = 2s
+                bars = "█" * i + "░" * (10 - i)
+                pct = i * 10
+                await progress.edit(content=f"```\n[{bars}] {pct}% — Initialisation en cours...\n```")
+            
+            await progress.edit(content="```\n[██████████] 100% — Votre ticket a été parfaitement initialisé !\n```")
+            await asyncio.sleep(1)
+
+            # ✅ Message principal du ticket (en backticks)
             msg = (
                 "```\n"
-                "TICKET — SEÏKO v8.0\n"
-                "────────────────────\n"
+                "TICKET — SEÏKO\n"
+                "──────────────\n"
                 f"Catégorie : {category}\n"
                 f"Utilisateur : {user.name}\n"
                 f"Heure : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                "────────────────────\n"
+                "──────────────\n"
                 "En attente de prise en charge...\n"
                 "```\n"
-                "Merci de détailler votre demande. Réponse sous 24-48h."
+                "Merci de détailler votre demande. Un membre du staff vous répondra sous 24-48h."
             )
             await channel.send(content=ping_line)
             await channel.send(msg)
@@ -112,33 +105,33 @@ class TicketSystem(commands.Cog):
                 if not i.user.guild_permissions.manage_channels:
                     await i.response.send_message("❌ Staff only.", ephemeral=True)
                     return
-
                 await i.response.defer()
                 await i.channel.edit(name=f"closed-{i.channel.name}")
+                
+                # Transcript optionnel
+                transcript_ch = None
+                if config.get("transcript_channel"):
+                    transcript_ch = self.bot.get_channel(int(config["transcript_channel"]))
+                
+                if transcript_ch:
+                    messages = []
+                    async for m in i.channel.history(limit=1000, oldest_first=True):
+                        if m.type == discord.MessageType.default and not m.author.bot:
+                            messages.append(f"[{m.created_at.strftime('%H:%M')}] {m.author}: {m.content}")
+                    if messages:
+                        await transcript_ch.send(
+                            f"📄 **Transcript — Ticket `{i.channel.id}`**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
+                        )
 
-                # ✅ Transfert du transcript
-                transcript_channel_id = config.get("transcript_channel")
-                if transcript_channel_id:
-                    transcript_ch = self.bot.get_channel(int(transcript_channel_id))
-                    if transcript_ch:
-                        messages = []
-                        async for msg in i.channel.history(limit=1000, oldest_first=True):
-                            if msg.type == discord.MessageType.default and not msg.author.bot:
-                                messages.append(f"[{msg.created_at.strftime('%H:%M')}] {msg.author}: {msg.content}")
-                        if messages:
-                            await transcript_ch.send(
-                                f"📄 **Transcript — Ticket `{ticket_id}`**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
-                            )
-
-                # ✅ Barre de suppression 24h (message public)
-                progress = await i.channel.send("```\n[░░░░░░░░░░] 0% — Suppression dans 24h...\n```")
-                total_steps = 24 * 4  # toutes les 15 min
+                # Barre de suppression 24h
+                progress_24h = await i.channel.send("```\n[░░░░░░░░░░] 0% — Suppression dans 24h...\n```")
+                total_steps = 96  # toutes les 15 min
                 for step in range(1, total_steps + 1):
                     await asyncio.sleep(900)  # 15 min
                     pct = int((step / total_steps) * 100)
-                    bars = "█" * (step) + "░" * (total_steps - step)
+                    bars = "█" * min(step, 10) + "░" * max(0, 10 - step)
                     try:
-                        await progress.edit(content=f"```\n[{bars[:10]}] {pct}% — Suppression en cours...\n```")
+                        await progress_24h.edit(content=f"```\n[{bars}] {pct}% — Suppression en cours...\n```")
                     except:
                         break
                 try:
@@ -151,8 +144,6 @@ class TicketSystem(commands.Cog):
             close_btn.callback = close_callback
             view.add_item(close_btn)
             await channel.send(view=view)
-
-            await interaction.followup.send(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
 
         select.callback = select_callback
         await ctx.respond("Sélectionnez une catégorie :", view=discord.ui.View().add_item(select), ephemeral=False)
