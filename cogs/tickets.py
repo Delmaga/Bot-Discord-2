@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands, tasks
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 
 def load_data():
@@ -29,7 +29,7 @@ class TicketHandler(commands.Cog):
 
     @tasks.loop(hours=1)
     async def cleanup_old_tickets(self):
-        now = datetime.now(datetime.timezone.utc)
+        now = datetime.now(timezone.utc)
         to_delete = []
         for ch_id, ticket in self.data["tickets"].items():
             if ticket["state"] == "CLOSED":
