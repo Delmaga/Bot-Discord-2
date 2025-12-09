@@ -1,6 +1,6 @@
 # cogs/tickets.py
 import discord
-from discord.ext import commands, tasks  # ← 'tasks' ajouté ici
+from discord.ext import commands, tasks
 import json
 import os
 from datetime import datetime, timedelta, UTC
@@ -18,6 +18,20 @@ def load_data():
 def save_data(data):
     with open("data/tickets_seiko_v4.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+
+def format_dynamic_state(ticket):
+    if ticket["state"] == "OPEN":
+        return "▶️ **En attente de prise en charge...**"
+    elif ticket["state"] == "CLAIMED":
+        claimant = ticket.get("claimed_by", "Inconnu")
+        user = f"<@{claimant}>" if claimant != "Inconnu" else "Staff"
+        return f"🔷 **Pris en charge par** {user}"
+    else:
+        return "🔴 **Fermé — Suppression dans 24h**"
+
+def generate_animated_header():
+    # Effet de "scanline" subtil via Unicode
+    return "🟦 **TICKET ─ SEÏKO v4.0**"
 
 # === ÉCOUTEUR GLOBAL + NETTOYAGE ===
 class TicketHandler(commands.Cog):
@@ -103,6 +117,35 @@ class TicketHandler(commands.Cog):
             await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
 
         save_data(data)
+        await self.update_ticket_message(interaction.channel, ticket_id)
+
+    async def update_ticket_message(self, channel, ticket_id):
+        """Met à jour le message principal du ticket avec l'état dynamique"""
+        data = load_data()
+        if ticket_id not in data["tickets"]:
+            return
+        ticket = data["tickets"][ticket_id]
+        config = data["config"].get(str(channel.guild.id), {"ping_role": None, "footer": "By Seïko"})
+        ping_line = ""
+        if config["ping_role"]:
+            role = channel.guild.get_role(config["ping_role"])
+            if role:
+                ping_line = f"{role.mention}"
+
+        message_lines = [
+            generate_animated_header(),
+            ping_line,
+            "───────────────────────────────────────",
+            f"📁 Catégorie : {ticket['category']}",
+            f"👤 Utilisateur : <@{ticket['user_id']}>",
+            f"🕒 Heure : <t:{int(datetime.fromisoformat(ticket['created_at']).timestamp())}:F>",
+            "───────────────────────────────────────",
+            format_dynamic_state(ticket),
+            "",
+            "Merci de détailler votre demande.",
+            "Un membre du staff vous répondra sous 24-48h."
+        ]
+        await channel.send(content="\n".join(message_lines))  # Envoi d'un nouveau message mis à jour
 
 # === COMMANDES SLASH ===
 class TicketSystem(commands.Cog):
@@ -114,17 +157,15 @@ class TicketSystem(commands.Cog):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"ping_role": None}
+            data["config"][guild_id] = {"ping_role": None, "footer": "By Seïko • v4.0"}
             save_data(data)
 
-        # Permissions
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
             ctx.author: discord.PermissionOverwrite(read_messages=True, send_messages=True),
             ctx.guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
         }
 
-        # Rôle staff
         ping_line = ""
         role_id = data["config"][guild_id]["ping_role"]
         if role_id:
@@ -133,14 +174,12 @@ class TicketSystem(commands.Cog):
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                 ping_line = f"{role.mention}"
 
-        # Création du salon
         channel = await ctx.guild.create_text_channel(
             name=f"ticket-{ctx.author.name}",
             overwrites=overwrites,
             reason=f"Ticket ouvert par {ctx.author}"
         )
 
-        # Sauvegarde du ticket
         ticket_id = str(channel.id)
         data["tickets"][ticket_id] = {
             "user_id": str(ctx.author.id),
@@ -150,16 +189,16 @@ class TicketSystem(commands.Cog):
         }
         save_data(data)
 
-        # Message structuré SEÏKO — avec ping juste sous le titre
+        # Message initial avec effet "high-tech"
         message_lines = [
-            "🟦 **TICKET — Seïko**",
-            ping_line,  # ← Mention du rôle ici, juste en dessous
+            generate_animated_header(),
+            ping_line,
             "───────────────────────────────────────",
             f"📁 Catégorie : {category}",
             f"👤 Utilisateur : {ctx.author.name}",
             f"🕒 Heure : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "───────────────────────────────────────",
-            "▶️ En attente de prise en charge...",
+            "▶️ **En attente de prise en charge...**",
             "",
             "Merci de détailler votre demande.",
             "Un membre du staff vous répondra sous 24-48h."
