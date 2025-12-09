@@ -9,7 +9,7 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)
+bot = discord.Bot(intents=intents)  # ← Obligatoire
 
 @bot.event
 async def on_ready():
@@ -21,6 +21,7 @@ for filename in os.listdir("./cogs"):
     if filename.endswith(".py") and filename != "__init__.py":
         try:
             bot.load_extension(f"cogs.{filename[:-3]}")
+            print(f"📦 {filename} chargé")
         except Exception as e:
             print(f"❌ Erreur {filename}: {e}")
 
