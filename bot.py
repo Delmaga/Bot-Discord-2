@@ -9,12 +9,13 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)  # ← SEULEMENT CETTE LIGNE POUR LE BOT
+bot = discord.Bot(intents=intents)
 
 @bot.event
 async def on_ready():
     print("✅ Seïko en ligne.")
-    await bot.tree.sync()
+    await bot.sync_commands()  # ← CORRECTION ICI
+    print("🌐 Commandes synchronisées.")
 
 for filename in os.listdir("./cogs"):
     if filename.endswith(".py") and filename != "__init__.py":
