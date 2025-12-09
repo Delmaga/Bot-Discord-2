@@ -24,63 +24,59 @@ class WelcomeSystem(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        gid = str(member.guild.id)
-        if gid not in self.config:
+        guild_id = str(member.guild.id)
+        if guild_id not in self.config:
             return
 
-        cfg = self.config[gid]
+        cfg = self.config[guild_id]
         channel = self.bot.get_channel(int(cfg["channel"]))
         if not channel:
             return
 
-        # ✅ Mention de l'utilisateur ici
-        welcome_message = cfg.get("description", "Bienvenue sur le serveur, ??!")
-        welcome_message = welcome_message.replace("???", member.mention)  # Optionnel
+        # Message animé style "ABRIBUS"
+        abribus_text = f".{member.name.upper()}. a rejoint **{member.guild.name.upper()}** !"
 
+        # Embed avec GIF animé
         embed = discord.Embed(
-            title=cfg.get("title", "Bienvenue !"),
-            description=welcome_message,
-            color=0x5865F2
+            description=abribus_text,
+            color=0x000000
         )
+        embed.set_image(url=cfg["gif_url"])  # ← GIF animé ici
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text="Merci de nous rejoindre !")
+        embed.set_footer(text="Bienvenue sur K-LAND • Merci de respecter les règles")
 
-        # ✅ Envoie le message avec la mention
-        await channel.send(member.mention, embed=embed)
-
-        # Ajouter les rôles
-        for rid in cfg.get("roles", []):
-            role = member.guild.get_role(int(rid))
+        # Mention du rôle (ex: @Membre)
+        ping = ""
+        if cfg.get("role"):
+            role = member.guild.get_role(int(cfg["role"]))
             if role:
-                await member.add_roles(role)
+                ping = f"{role.mention}"
+
+        await channel.send(content=ping, embed=embed)
 
     welcome = discord.SlashCommandGroup("welcome", "Configurer le message de bienvenue")
 
     @welcome.command(name="create", description="Configurer le message de bienvenue")
     @commands.has_permissions(administrator=True)
-    async def create(self, ctx, titre: str, description: str, salon: discord.TextChannel):
-        gid = str(ctx.guild.id)
-        self.config[gid] = {
-            "title": titre,
-            "description": description,  # Tu peux utiliser ??? ou laisser vide
+    async def create(self, ctx, gif_url: str, salon: discord.TextChannel):
+        cfg = {
             "channel": str(salon.id),
-            "roles": []
+            "role": None,
+            "gif_url": gif_url
         }
+        self.config[str(ctx.guild.id)] = cfg
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Bienvenue configuré dans {salon.mention}.", ephemeral=False)
+        await ctx.respond(f"✅ Bienvenue configuré avec le GIF : {gif_url}", ephemeral=False)
 
-    @welcome.command(name="role", description="Ajouter un rôle à donner à l'arrivée")
+    @welcome.command(name="role", description="Ajouter un rôle à donner à l’arrivée")
     @commands.has_permissions(administrator=True)
     async def role(self, ctx, rôle: discord.Role):
         gid = str(ctx.guild.id)
         if gid not in self.config:
-            return await ctx.respond("❌ Configure d'abord le message avec `/welcome create`.", ephemeral=False)
-        if "roles" not in self.config[gid]:
-            self.config[gid]["roles"] = []
-        if str(rôle.id) not in self.config[gid]["roles"]:
-            self.config[gid]["roles"].append(str(rôle.id))
+            return await ctx.respond("❌ Configure d’abord le message avec `/welcome create`.", ephemeral=False)
+        self.config[gid]["role"] = str(rôle.id)
         save_json(self.config_path, self.config)
-        await ctx.respond(f"✅ Rôle {rôle.mention} ajouté.", ephemeral=False)
+        await ctx.respond(f"✅ Rôle {rôle.mention} ajouté à la bienvenue.", ephemeral=False)
 
     @welcome.command(name="test", description="Tester le message de bienvenue")
     @commands.has_permissions(administrator=True)
@@ -89,15 +85,12 @@ class WelcomeSystem(commands.Cog):
         if gid not in self.config:
             return await ctx.respond("❌ Bienvenue non configuré.", ephemeral=False)
         cfg = self.config[gid]
-        embed = discord.Embed(
-            title=cfg.get("title", "Bienvenue !"),
-            description=cfg.get("description", "").replace("???", ctx.author.mention),
-            color=0x5865F2
-        )
+        abribus_text = f".{ctx.author.name.upper()}. a rejoint **{ctx.guild.name.upper()}** !"
+        embed = discord.Embed(description=abribus_text, color=0x000000)
+        embed.set_image(url=cfg["gif_url"])
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        embed.set_footer(text="Test de bienvenue")
-        await ctx.send(ctx.author.mention, embed=embed)
-        await ctx.respond("✅ Test envoyé.", ephemeral=True)
+        embed.set_footer(text="Test de bienvenue • K-LAND")
+        await ctx.send(embed=embed)
 
 def setup(bot):
     bot.add_cog(WelcomeSystem(bot))

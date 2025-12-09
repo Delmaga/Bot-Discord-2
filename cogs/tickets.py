@@ -92,13 +92,12 @@ class TicketCategorySelect(discord.ui.Select):
             guild.me: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
         }
 
-        # Ping du rôle
-        ping_content = ""
+        ping_line = ""
         if self.config.get("ping_role"):
             role = guild.get_role(self.config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                ping_content = f"{role.mention}"
+                ping_line = f"{role.mention}"
 
         channel = await guild.create_text_channel(
             name=f"ticket-{user.name}",
@@ -109,6 +108,7 @@ class TicketCategorySelect(discord.ui.Select):
         embed = discord.Embed(
             description=(
                 f"🎫 **NOUVEAU TICKET OUVERT**\n\n"
+                f"{ping_line}\n"  # ← Mention du rôle juste après le titre
                 f"**Catégorie** : {category['name']}\n"
                 f"**Utilisateur** : {user.mention}\n"
                 f"**Heure** : <t:{int(datetime.now().timestamp())}:F>\n\n"
@@ -121,9 +121,8 @@ class TicketCategorySelect(discord.ui.Select):
         if guild.icon:
             embed.set_thumbnail(url=guild.icon.url)
 
-        await channel.send(content=ping_content, embed=embed)
+        await channel.send(embed=embed)
         await channel.send(view=TicketActionView())
-
         await interaction.response.send_message(
             f"✅ **{user.mention}, votre ticket a été créé :** {channel.mention}",
             ephemeral=False
