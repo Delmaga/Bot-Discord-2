@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands, tasks
 import json
 import os
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 import asyncio
 
 # === UTILITAIRES ===
@@ -19,20 +19,6 @@ def save_data(data):
     with open("data/tickets_seiko_v4.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def format_dynamic_state(ticket):
-    if ticket["state"] == "OPEN":
-        return "▶️ **En attente de prise en charge...**"
-    elif ticket["state"] == "CLAIMED":
-        claimant = ticket.get("claimed_by", "Inconnu")
-        user = f"<@{claimant}>" if claimant != "Inconnu" else "Staff"
-        return f"🔷 **Pris en charge par** {user}"
-    else:
-        return "🔴 **Fermé — Suppression dans 24h**"
-
-def generate_animated_header():
-    # Effet de "scanline" subtil via Unicode
-    return "🟦 **TICKET ─ SEÏKO v4.0**"
-
 # === ÉCOUTEUR GLOBAL + NETTOYAGE ===
 class TicketHandler(commands.Cog):
     def __init__(self, bot):
@@ -45,7 +31,7 @@ class TicketHandler(commands.Cog):
 
     @tasks.loop(hours=1)
     async def cleanup_old_tickets(self):
-        now = datetime.now(UTC)
+        now = datetime.now(datetime.timezone.utc)
         to_delete = []
         for ch_id, ticket in self.data["tickets"].items():
             if ticket["state"] == "CLOSED":
@@ -97,7 +83,7 @@ class TicketHandler(commands.Cog):
 
         elif action == "close":
             ticket["state"] = "CLOSED"
-            ticket["closed_at"] = datetime.now(UTC).isoformat()
+            ticket["closed_at"] = datetime.now(datetime.timezone.utc).isoformat()
             await interaction.channel.edit(name=f"closed-{interaction.channel.name}")
             await interaction.channel.send("🔴 **Ticket fermé. Suppression dans 24h.**")
             await interaction.response.defer()
@@ -117,35 +103,6 @@ class TicketHandler(commands.Cog):
             await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
 
         save_data(data)
-        await self.update_ticket_message(interaction.channel, ticket_id)
-
-    async def update_ticket_message(self, channel, ticket_id):
-        """Met à jour le message principal du ticket avec l'état dynamique"""
-        data = load_data()
-        if ticket_id not in data["tickets"]:
-            return
-        ticket = data["tickets"][ticket_id]
-        config = data["config"].get(str(channel.guild.id), {"ping_role": None, "footer": "By Seïko"})
-        ping_line = ""
-        if config["ping_role"]:
-            role = channel.guild.get_role(config["ping_role"])
-            if role:
-                ping_line = f"{role.mention}"
-
-        message_lines = [
-            generate_animated_header(),
-            ping_line,
-            "───────────────────────────────────────",
-            f"📁 Catégorie : {ticket['category']}",
-            f"👤 Utilisateur : <@{ticket['user_id']}>",
-            f"🕒 Heure : <t:{int(datetime.fromisoformat(ticket['created_at']).timestamp())}:F>",
-            "───────────────────────────────────────",
-            format_dynamic_state(ticket),
-            "",
-            "Merci de détailler votre demande.",
-            "Un membre du staff vous répondra sous 24-48h."
-        ]
-        await channel.send(content="\n".join(message_lines))  # Envoi d'un nouveau message mis à jour
 
 # === COMMANDES SLASH ===
 class TicketSystem(commands.Cog):
@@ -157,7 +114,7 @@ class TicketSystem(commands.Cog):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"ping_role": None, "footer": "By Seïko • v4.0"}
+            data["config"][guild_id] = {"ping_role": None}
             save_data(data)
 
         overwrites = {
@@ -184,21 +141,20 @@ class TicketSystem(commands.Cog):
         data["tickets"][ticket_id] = {
             "user_id": str(ctx.author.id),
             "category": category,
-            "created_at": datetime.now(UTC).isoformat(),
+            "created_at": datetime.now(datetime.timezone.utc).isoformat(),
             "state": "OPEN"
         }
         save_data(data)
 
-        # Message initial avec effet "high-tech"
         message_lines = [
-            generate_animated_header(),
+            "🟦 **TICKET — Seïko**",
             ping_line,
             "───────────────────────────────────────",
             f"📁 Catégorie : {category}",
             f"👤 Utilisateur : {ctx.author.name}",
             f"🕒 Heure : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             "───────────────────────────────────────",
-            "▶️ **En attente de prise en charge...**",
+            "▶️ En attente de prise en charge...",
             "",
             "Merci de détailler votre demande.",
             "Un membre du staff vous répondra sous 24-48h."
