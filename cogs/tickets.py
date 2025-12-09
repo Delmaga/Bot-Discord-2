@@ -2,20 +2,20 @@
 import discord
 from discord.ext import commands, tasks
 import json
-import os
+ import os
 from datetime import datetime, timedelta, timezone
 import asyncio
 
 def load_data():
     os.makedirs("data", exist_ok=True)
-    path = "data/tickets_seiko_v5.json"
+    path = "data/tickets_seiko_v6.json"
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"config": {}, "tickets": {}}
 
 def save_data(data):
-    with open("data/tickets_seiko_v5.json", "w", encoding="utf-8") as f:
+    with open("data/tickets_seiko_v6.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 class TicketHandler(commands.Cog):
@@ -50,7 +50,7 @@ class TicketSystem(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="ticket", description="Ouvrir un ticket")
+    @discord.slash_command(name="ticket", description="Ouvrir un ticket via menu")
     async def ticket(self, ctx):
         data = load_data()
         guild_id = str(ctx.guild.id)
@@ -84,7 +84,6 @@ class TicketSystem(commands.Cog):
         )
 
         async def select_callback(interaction):
-            # ✅ Correction : utilise interaction.data['values']
             category = interaction.data['values'][0]
             if interaction.user != ctx.author:
                 await interaction.response.send_message("❌ Ce ticket est privé.", ephemeral=True)
@@ -120,6 +119,7 @@ class TicketSystem(commands.Cog):
             }
             save_data(data)
 
+            # ✅ Texte en gras (sans backticks)
             message_lines = [
                 "🟦 **TICKET — Seïko**",
                 ping_line,
@@ -136,7 +136,6 @@ class TicketSystem(commands.Cog):
 
             await channel.send(content="\n".join(message_lines))
 
-            # === BOUTONS : Prendre en charge + Fermer ===
             async def claim_callback(interaction):
                 if not interaction.user.guild_permissions.manage_channels:
                     await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
@@ -157,7 +156,7 @@ class TicketSystem(commands.Cog):
                 except:
                     pass
 
-                # ✅ Envoi du transcript si un salon est configuré
+                # ✅ Envoi du transcript
                 if config["transcript_channel"]:
                     transcript_channel = self.bot.get_channel(int(config["transcript_channel"]))
                     if transcript_channel:
@@ -166,12 +165,9 @@ class TicketSystem(commands.Cog):
                             if msg.type == discord.MessageType.default and not msg.author.bot:
                                 messages.append(f"[{msg.created_at.strftime('%Y-%m-%d %H:%M')}] {msg.author}: {msg.content}")
                         if messages:
-                            try:
-                                await transcript_channel.send(
-                                    f"📄 **Transcript — Ticket {ticket_id}**\n```txt\n" + "\n".join(messages[:50]) + "\n```"
-                                )
-                            except:
-                                pass
+                            await transcript_channel.send(
+                                f"📄 **Transcript — Ticket {ticket_id}**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
+                            )
 
             view = discord.ui.View(timeout=None)
             claim_btn = discord.ui.Button(label="Prendre en charge", style=discord.ButtonStyle.primary, emoji="👤")
@@ -203,6 +199,7 @@ class TicketSystem(commands.Cog):
         view.add_item(select)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
 
+    # ✅ COMMANDE 1 : /ticket_create avec salon cible
     @discord.slash_command(name="ticket_create", description="Créer un ticket dans un salon spécifique")
     async def ticket_create(self, ctx, salon: discord.TextChannel, category: discord.Option(str, choices=["Support", "Bug", "Autre"])):
         data = load_data()
@@ -256,7 +253,8 @@ class TicketSystem(commands.Cog):
         await channel.send(content="\n".join(message_lines))
         await ctx.respond(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
 
-    @discord.slash_command(name="ticket_transcript", description="Définir le salon pour les transcripts")
+    # ✅ COMMANDE 2 : /ticket_transcript
+    @discord.slash_command(name="ticket_transcript", description="Définir le salon pour les transcripts automatiques")
     @commands.has_permissions(administrator=True)
     async def ticket_transcript(self, ctx, salon: discord.TextChannel):
         data = load_data()
@@ -265,7 +263,7 @@ class TicketSystem(commands.Cog):
             data["config"][guild_id] = {}
         data["config"][guild_id]["transcript_channel"] = str(salon.id)
         save_data(data)
-        await ctx.respond(f"✅ Transcripts envoyés dans {salon.mention}.", ephemeral=False)
+        await ctx.respond(f"✅ Transcripts automatiques activés dans {salon.mention}.", ephemeral=False)
 
     @discord.slash_command(name="ticket_category_add", description="Ajouter une catégorie")
     @commands.has_permissions(administrator=True)
