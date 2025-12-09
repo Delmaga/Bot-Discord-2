@@ -1,3 +1,4 @@
+# bot.py
 import os
 import discord
 import sys
@@ -8,7 +9,7 @@ if not TOKEN:
     sys.exit(1)
 
 intents = discord.Intents.all()
-bot = discord.Bot(intents=intents)
+bot = discord.Bot(intents=intents)  # ← SEULEMENT CETTE LIGNE POUR LE BOT
 
 @bot.event
 async def on_ready():
