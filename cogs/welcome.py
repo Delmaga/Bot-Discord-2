@@ -33,19 +33,19 @@ class WelcomeSystem(commands.Cog):
         if not channel:
             return
 
-        # Message animé style "ABRIBUS"
-        abribus_text = f".{member.name.upper()}. a rejoint **{member.guild.name.upper()}** !"
+        # Message sans majuscules
+        message = f".{member.name} a rejoint seïko !"
 
-        # Embed avec GIF animé
+        # Embed avec GIF animé (le texte est déjà dans l'image)
         embed = discord.Embed(
-            description=abribus_text,
-            color=0x000000
+            description=message,
+            color=0x000000  # Fond noir pour que le GIF ressorte bien
         )
-        embed.set_image(url=cfg["gif_url"])  # ← GIF animé ici
+        embed.set_image(url=cfg["gif_url"])  # ← GIF avec texte intégré
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text="Bienvenue sur K-LAND • Merci de respecter les règles")
+        embed.set_footer(text="Bienvenue sur seïko • Merci de respecter les règles")
 
-        # Mention du rôle (ex: @Membre)
+        # Mention du rôle
         ping = ""
         if cfg.get("role"):
             role = member.guild.get_role(int(cfg["role"]))
@@ -85,11 +85,11 @@ class WelcomeSystem(commands.Cog):
         if gid not in self.config:
             return await ctx.respond("❌ Bienvenue non configuré.", ephemeral=False)
         cfg = self.config[gid]
-        abribus_text = f".{ctx.author.name.upper()}. a rejoint **{ctx.guild.name.upper()}** !"
+        abribus_text = f".{ctx.author.name} a rejoint seïko !"
         embed = discord.Embed(description=abribus_text, color=0x000000)
         embed.set_image(url=cfg["gif_url"])
         embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        embed.set_footer(text="Test de bienvenue • K-LAND")
+        embed.set_footer(text="Test de bienvenue • seïko")
         await ctx.send(embed=embed)
 
 def setup(bot):
