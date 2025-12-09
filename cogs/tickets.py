@@ -1,16 +1,126 @@
-# === COMMANDES SLASH (en groupe) ===
-ticket = discord.SlashCommandGroup("ticket", "Gérer les tickets — SEÏKO v4.0")
+# cogs/tickets.py
+import discord
+from discord.ext import commands, tasks
+import json
+import os
+from datetime import datetime, timedelta
+import asyncio
+
+def load_data():
+    os.makedirs("data", exist_ok=True)
+    path = "data/tickets_seiko_v4.json"
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"config": {}, "tickets": {}}
+
+def save_data(data):
+    with open("data/tickets_seiko_v4.json", "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+class TicketHandler(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.data = load_data()
+        self.cleanup_old_tickets.start()
+
+    def cog_unload(self):
+        self.cleanup_old_tickets.cancel()
+
+    @tasks.loop(hours=1)
+    async def cleanup_old_tickets(self):
+        now = datetime.now(datetime.timezone.utc)
+        to_delete = []
+        for ch_id, ticket in self.data["tickets"].items():
+            if ticket["state"] == "CLOSED":
+                close_time = datetime.fromisoformat(ticket["closed_at"])
+                if (now - close_time) > timedelta(hours=24):
+                    to_delete.append(ch_id)
+        for ch_id in to_delete:
+            try:
+                channel = self.bot.get_channel(int(ch_id))
+                if channel:
+                    await channel.delete(reason="[SEÏKO] Nettoyage auto 24h")
+                self.data["tickets"].pop(ch_id, None)
+                save_data(self.data)
+            except:
+                pass
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction):
+        if interaction.type != discord.InteractionType.component:
+            return
+        cid = interaction.data.get("custom_id", "")
+        if not cid.startswith("ticket_"):
+            return
+
+        parts = cid.split("_")
+        if len(parts) < 3:
+            return
+
+        action, ticket_id = parts[1], parts[2]
+        data = load_data()
+        if ticket_id not in data["tickets"]:
+            await interaction.response.send_message("❌ Ticket introuvable.", ephemeral=True)
+            return
+
+        if not interaction.user.guild_permissions.manage_channels:
+            await interaction.response.send_message("❌ Réservé au staff.", ephemeral=True)
+            return
+
+        ticket = data["tickets"][ticket_id]
+
+        if action == "claim":
+            if ticket["state"] != "OPEN":
+                await interaction.response.send_message("✅ Déjà pris en charge.", ephemeral=True)
+                return
+            ticket["state"] = "CLAIMED"
+            ticket["claimed_by"] = str(interaction.user.id)
+            await interaction.channel.send(f"🔷 **{interaction.user.mention} a pris en charge ce ticket.**")
+            await interaction.response.defer()
+
+        elif action == "close":
+            ticket["state"] = "CLOSED"
+            ticket["closed_at"] = datetime.now(datetime.timezone.utc).isoformat()
+            await interaction.channel.edit(name=f"closed-{interaction.channel.name}")
+            await interaction.channel.send("🔴 **Ticket fermé. Suppression dans 24h.**")
+            await interaction.response.defer()
+
+        elif action == "transcript":
+            messages = []
+            async for msg in interaction.channel.history(limit=1000, oldest_first=True):
+                if msg.type == discord.MessageType.default and not msg.author.bot:
+                    messages.append(f"[{msg.created_at.strftime('%Y-%m-%d %H:%M')}] {msg.author}: {msg.content}")
+            if messages:
+                try:
+                    await interaction.user.send(
+                        f"📄 **Transcript — Ticket {ticket_id}**\n```txt\n" + "\n".join(messages[:50]) + "\n```"
+                    )
+                except:
+                    pass
+            await interaction.response.send_message("✅ Transcript envoyé en MP.", ephemeral=True)
+
+        save_data(data)
 
 class TicketSystem(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+
+    ticket = discord.SlashCommandGroup("ticket", "Gérer les tickets — SEÏKO v4.0")
 
     @ticket.command(name="create", description="Ouvrir un ticket")
     async def ticket_create(self, ctx, category: discord.Option(str, choices=["Support", "Bug", "Autre"])):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"ping_role": None, "footer": "By Seïko • v4.0"}
+            data["config"][guild_id] = {
+                "categories": [
+                    {"name": "Support", "description": "Besoin d'aide ?", "emoji": "💬"},
+                    {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"}
+                ],
+                "ping_role": None,
+                "footer": "By Seïko • v4.0"
+            }
             save_data(data)
 
         overwrites = {
@@ -111,6 +221,19 @@ class TicketSystem(commands.Cog):
                 save_data(data)
                 return await ctx.respond(f"✅ Catégorie mise à jour.", ephemeral=False)
         await ctx.respond(f"❌ Catégorie `{nom}` non trouvée.", ephemeral=False)
+
+    @ticket.command(name="footer", description="Modifier le footer")
+    @commands.has_permissions(administrator=True)
+    async def ticket_footer(self, ctx, texte: str):
+        data = load_data()
+        guild_id = str(ctx.guild.id)
+        if guild_id not in data["config"]:
+            data["config"][guild_id] = {}
+        config = data["config"][guild_id]
+        config["footer"] = texte
+        data["config"][guild_id] = config
+        save_data(data)
+        await ctx.respond(f"✅ Footer : `{texte}`", ephemeral=False)
 
     @ticket.command(name="ping", description="Définir le rôle staff")
     @commands.has_permissions(administrator=True)
