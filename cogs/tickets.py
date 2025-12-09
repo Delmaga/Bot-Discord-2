@@ -78,15 +78,16 @@ class TicketSystem(commands.Cog):
             )
 
         select = discord.ui.Select(
-            placeholder="Sélectionnez une catégorie",
+            placeholder="Veuillez sélectionner une catégorie",
             options=options
         )
 
         async def select_callback(interaction):
+            # ✅ Correction : utilise interaction.data['values']
+            category = interaction.data['values'][0]
             if interaction.user != ctx.author:
                 await interaction.response.send_message("❌ Ce ticket est privé.", ephemeral=True)
                 return
-            category = interaction.values[0]
             guild = interaction.guild
             user = interaction.user
 
@@ -167,9 +168,24 @@ class TicketSystem(commands.Cog):
             await interaction.response.send_message(f"✅ Ticket créé : {channel.mention}", ephemeral=False)
 
         select.callback = select_callback
+
+        # ✅ Embed stylé comme dans ton image
+        embed = discord.Embed(
+            title="🎫 CENTRE D’ASSISTANCE",
+            description=(
+                "Veuillez sélectionner une catégorie ci-dessous pour ouvrir un ticket.\n\n"
+                "Un membre de l’équipe vous répondra sous **24 à 48 heures**.\n"
+                "Merci de votre patience."
+            ),
+            color=0x2b2d31  # Gris foncé = fond transparent
+        )
+        embed.set_footer(text=config["footer"])
+        if ctx.guild.icon:
+            embed.set_thumbnail(url=ctx.guild.icon.url)
+
         view = discord.ui.View(timeout=300)
         view.add_item(select)
-        await ctx.respond("Sélectionnez une catégorie :", view=view, ephemeral=False)
+        await ctx.respond(embed=embed, view=view, ephemeral=False)
 
     @discord.slash_command(name="ticket_category_add", description="Ajouter une catégorie")
     @commands.has_permissions(administrator=True)
