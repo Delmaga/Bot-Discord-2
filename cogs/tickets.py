@@ -214,7 +214,7 @@ class TicketSystem(commands.Cog):
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon.url)
 
-        view = discord.ui.View(timeout=300)
+        view = discord.ui.View(timeout=None)
         view.add_item(select)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
 
