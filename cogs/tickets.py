@@ -150,19 +150,31 @@ class TicketSystem(commands.Cog):
             save_data(data)
 
             message_lines = [
-                "🟦 **TICKET — Seïko**",
-                ping_line,
-                "───────────────────────────────────────",
-                f"📁 Catégorie : **{category}**",
-                f"👤 Utilisateur : **{user.name}**",
-                f"🔢 Ticket N° : **{ticket_number}**",
-                f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
-                "───────────────────────────────────────",
-                "▶️ En attente de prise en charge...",
-                "",
-                "Merci de détailler votre demande.",
-                "Un membre du staff vous répondra sous 24-48h."
-            ]
+            "🟦 **TICKET — Seïko**",
+            ping_line,
+            "───────────────────────────────────────",
+            "**FR**",
+            f"📁 Catégorie : **{category}**",
+            f"👤 Utilisateur : **{user.name}**",
+            f"🔢 Ticket N° : **{ticket_number}**",
+            f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
+            "───────────────────────────────────────",
+            "▶️ En attente de prise en charge...",
+            "",
+            "Merci de détailler votre demande.",
+            "Un membre du staff vous répondra sous 24-48h.",
+            "",
+            "**EN**",
+            f"📁 Category : **{category}**",
+            f"👤 User : **{user.name}**",
+            f"🔢 Ticket N° : **{ticket_number}**",
+            f"🕒 Time : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
+            "───────────────────────────────────────",
+            "▶️ Awaiting staff response...",
+            "",
+            "Please detail your request.",
+            "A staff member will respond within 24-48 hours."
+        ]
             await channel.send(content="\n".join(message_lines))
 
             async def claim_callback(i):
@@ -218,7 +230,7 @@ class TicketSystem(commands.Cog):
                     item.callback = close_callback
 
             await channel.send(view=view)
-            await interaction.followup.send(f"✅ Ticket **#{ticket_number}** créé : {channel.mention}", ephemeral=False)
+            await interaction.followup.send(f"✅ Ticket **#{ticket_number}** créé : {channel.mention}", ephemeral=True)
 
         select.callback = select_callback
         embed = discord.Embed(
