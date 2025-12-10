@@ -284,14 +284,27 @@ class TicketSystem(commands.Cog):
             "🟦 **TICKET — Seïko**",
             ping_line,
             "───────────────────────────────────────",
+            "**FR**",
             f"📁 Catégorie : **{category}**",
-            f"👤 Utilisateur : **{ctx.author.name}**",
+            f"👤 Utilisateur : **{user.name}**",
             f"🔢 Ticket N° : **{ticket_number}**",
             f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
             "───────────────────────────────────────",
-            "▶️ En attente...",
+            "▶️ En attente de prise en charge...",
             "",
-            "Merci de détailler votre demande."
+            "Merci de détailler votre demande.",
+            "Un membre du staff vous répondra sous 24-48h.",
+            "",
+            "**EN**",
+            f"📁 Category : **{category}**",
+            f"👤 User : **{user.name}**",
+            f"🔢 Ticket N° : **{ticket_number}**",
+            f"🕒 Time : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
+            "───────────────────────────────────────",
+            "▶️ Awaiting staff response...",
+            "",
+            "Please detail your request.",
+            "A staff member will respond within 24-48 hours."
         ]
         await channel.send(content="\n".join(message_lines))
         await ctx.respond(f"✅ Ticket **#{ticket_number}** : {channel.mention}", ephemeral=False)
