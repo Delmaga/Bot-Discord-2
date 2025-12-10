@@ -40,7 +40,7 @@ class TicketHandler(commands.Cog):
             try:
                 channel = self.bot.get_channel(int(ch_id))
                 if channel:
-                    await channel.delete(reason="[SEÏKO] Nettoyage auto 24h")
+                    await channel.delete(reason="[Seïko] Car cleaning 24h")
                 self.data["tickets"].pop(ch_id, None)
                 save_data(self.data)
             except:
@@ -50,15 +50,15 @@ class TicketSystem(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="ticket", description="Ouvrir un ticket via menu")
+    @discord.slash_command(name="ticket", description="Open a ticket via the menu")
     async def ticket(self, ctx):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
             data["config"][guild_id] = {
                 "categories": [
-                    {"name": "Support", "description": "Besoin d'aide ?", "emoji": "💬"},
-                    {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"},
+                    {"name": "Help", "description": "Need help ?", "emoji": "❓"},
+                    {"name": "Bug", "description": "Report a bug", "emoji": "⚠️"},
                     {"name": "Autre", "description": "Toute autre demande", "emoji": "📝"}
                 ],
                 "ping_role": None,
@@ -73,8 +73,8 @@ class TicketSystem(commands.Cog):
         # ✅ Vérifie que "categories" existe
         if "categories" not in config or not config["categories"]:
             config["categories"] = [
-                {"name": "Support", "description": "Besoin d'aide ?", "emoji": "💬"},
-                {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"},
+                {"name": "Help", "description": "Need help ?", "emoji": "❓"},
+                {"name": "Bug", "description": "Report a bug", "emoji": "⚠️"},
                 {"name": "Autre", "description": "Toute autre demande", "emoji": "📝"}
             ]
             save_data(data)
@@ -90,7 +90,7 @@ class TicketSystem(commands.Cog):
             )
 
         select = discord.ui.Select(
-            placeholder="Sélectionnez une catégorie",
+            placeholder="Select a category",
             options=options
         )
 
@@ -130,13 +130,13 @@ class TicketSystem(commands.Cog):
             )
 
             # ✅ BARRE 2S
-            progress = await channel.send("```\n[░░░░░░░░░░] 0% — Initialisation...\n```")
+            progress = await channel.send("```\n[░░░░░░░░░░] 0% — Initialization...\n```")
             for i in range(1, 11):
                 await asyncio.sleep(0.2)
                 bars = "█" * i + "░" * (10 - i)
                 pct = i * 10
-                await progress.edit(content=f"```\n[{bars}] {pct}% — Création...\n```")
-            await progress.edit(content="```\n[██████████] 100% — Ticket initialisé !\n```")
+                await progress.edit(content=f"```\n[{bars}] {pct}% — Creation...\n```")
+            await progress.edit(content="```\n[██████████] 100% — Ticket initialized !\n```")
             await asyncio.sleep(1)
             await progress.delete()
 
@@ -164,6 +164,8 @@ class TicketSystem(commands.Cog):
             "Merci de détailler votre demande.",
             "Un membre du staff vous répondra sous 24-48h.",
             "",
+            "/////////////////////////////////////////",
+            "",
             "**EN**",
             f"📁 Category : **{category}**",
             f"👤 User : **{user.name}**",
@@ -181,7 +183,7 @@ class TicketSystem(commands.Cog):
                 if not i.user.guild_permissions.manage_channels:
                     await i.response.send_message("❌ Staff only.", ephemeral=True)
                     return
-                await i.channel.send(f"🔷 **{i.user.mention} a pris en charge ce ticket.**")
+                await i.channel.send(f"🔷 **{i.user.mention} took charge of this ticket.**")
                 await i.response.defer()
 
             async def close_callback(i):
@@ -190,7 +192,7 @@ class TicketSystem(commands.Cog):
                     return
                 await i.response.defer()
                 await i.channel.edit(name=f"closed-{i.channel.name}")
-                await i.channel.send("🔒 Suppression dans 24h.")
+                await i.channel.send("🔒 Deletion in 24h.")
 
                 if config["transcript_channel"]:
                     ch = self.bot.get_channel(int(config["transcript_channel"]))
@@ -203,7 +205,7 @@ class TicketSystem(commands.Cog):
                             await ch.send(f"📄 **Transcript — Ticket {ticket_number}**\n```txt\n" + "\n".join(msgs[:100]) + "\n```")
 
                 # ✅ BARRE 24H
-                prog = await i.channel.send("```\n[░░░░░░░░░░] 0% — Suppression...\n```")
+                prog = await i.channel.send("```\n[░░░░░░░░░░] 0% — Deletion...\n```")
                 steps = 96
                 for s in range(1, steps + 1):
                     await asyncio.sleep(900)
@@ -211,7 +213,7 @@ class TicketSystem(commands.Cog):
                     filled = "█" * min(s, 10)
                     empty = "░" * max(0, 10 - s)
                     try:
-                        await prog.edit(content=f"```\n[{filled}{empty}] {pct}% — Suppression...\n```")
+                        await prog.edit(content=f"```\n[{filled}{empty}] {pct}% — Deletion...\n```")
                     except:
                         break
                 try:
@@ -220,22 +222,22 @@ class TicketSystem(commands.Cog):
                     pass
 
             view = discord.ui.View(timeout=None)
-            view.add_item(discord.ui.Button(label="👤 Prendre en charge", style=discord.ButtonStyle.primary))
-            view.add_item(discord.ui.Button(label="🔒 Fermer", style=discord.ButtonStyle.danger))
+            view.add_item(discord.ui.Button(label="👤 Take charge", style=discord.ButtonStyle.primary))
+            view.add_item(discord.ui.Button(label="🔒 Close", style=discord.ButtonStyle.danger))
 
             for item in view.children:
-                if item.label == "👤 Prendre en charge":
+                if item.label == "👤 Take charge":
                     item.callback = claim_callback
                 else:
                     item.callback = close_callback
 
             await channel.send(view=view)
-            await interaction.followup.send(f"✅ Ticket **#{ticket_number}** créé : {channel.mention}", ephemeral=True)
+            await interaction.followup.send(f"✅ Ticket **#{ticket_number}** created : {channel.mention}", ephemeral=True)
 
         select.callback = select_callback
         embed = discord.Embed(
-            title="🎫 **CENTRE D’ASSISTANCE**",
-            description="Sélectionnez une catégorie ci-dessous.",
+            title="🎫 **Support Center**",
+            description="Select a category below.",
             color=0x2b2d31
         )
         embed.set_footer(text="By Seïko")
@@ -243,8 +245,8 @@ class TicketSystem(commands.Cog):
         view.add_item(select)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
 
-    @discord.slash_command(name="ticket_create", description="Créer un ticket dans un salon")
-    async def ticket_create(self, ctx, salon: discord.TextChannel, category: discord.Option(str, choices=["Support", "Bug", "Autre"])):
+    @discord.slash_command(name="ticket_create", description="Create a ticket in a lounge")
+    async def ticket_create(self, ctx, salon: discord.TextChannel, category: discord.Option(str, choices=["Help", "Bug", "Autre"])):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
@@ -307,6 +309,8 @@ class TicketSystem(commands.Cog):
             "Merci de détailler votre demande.",
             "Un membre du staff vous répondra sous 24-48h.",
             "",
+            "///////////////////////////////////////",
+            "",
             "**EN**",
             f"📁 Category : **{category}**",
             f"👤 User : **{user.name}**",
@@ -321,7 +325,7 @@ class TicketSystem(commands.Cog):
         await channel.send(content="\n".join(message_lines))
         await ctx.respond(f"✅ Ticket **#{ticket_number}** : {channel.mention}", ephemeral=False)
 
-    @discord.slash_command(name="ticket_transcript", description="Salon pour les transcripts")
+    @discord.slash_command(name="ticket_transcript", description="Transcript room")
     @commands.has_permissions(administrator=True)
     async def ticket_transcript(self, ctx, salon: discord.TextChannel):
         data = load_data()
@@ -330,9 +334,9 @@ class TicketSystem(commands.Cog):
             data["config"][guild_id] = {}
         data["config"][guild_id]["transcript_channel"] = str(salon.id)
         save_data(data)
-        await ctx.respond(f"✅ Transcripts dans {salon.mention}.", ephemeral=False)
+        await ctx.respond(f"✅ Transcripts in {salon.mention}.", ephemeral=False)
 
-    @discord.slash_command(name="ticket_category_add", description="Ajouter une catégorie")
+    @discord.slash_command(name="ticket_category_add", description="Add a category")
     @commands.has_permissions(administrator=True)
     async def ticket_category_add(self, ctx, nom: str, description: str, emoji: str):
         data = load_data()
@@ -349,27 +353,27 @@ class TicketSystem(commands.Cog):
         config["categories"].append({"name": nom, "description": description, "emoji": emoji})
         data["config"][guild_id] = config
         save_data(data)
-        await ctx.respond(f"✅ Catégorie `{nom}` ajoutée.", ephemeral=False)
+        await ctx.respond(f"✅ Category `{nom}` added.", ephemeral=False)
 
-    @discord.slash_command(name="ticket_category_del", description="Supprimer une catégorie")
+    @discord.slash_command(name="ticket_category_del", description="Delete a category")
     @commands.has_permissions(administrator=True)
     async def ticket_category_del(self, ctx, nom: str):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            return await ctx.respond("❌ Aucune config.", ephemeral=False)
+            return await ctx.respond("❌ NO config.", ephemeral=False)
         config = data["config"][guild_id]
         if "categories" not in config:
             config["categories"] = []
         before = len(config["categories"])
         config["categories"] = [c for c in config["categories"] if c["name"] != nom]
         if len(config["categories"]) == before:
-            return await ctx.respond(f"❌ Catégorie `{nom}` introuvable.", ephemeral=False)
+            return await ctx.respond(f"❌ Category `{nom}` not found.", ephemeral=False)
         data["config"][guild_id] = config
         save_data(data)
-        await ctx.respond(f"✅ Catégorie `{nom}` supprimée.", ephemeral=False)
+        await ctx.respond(f"✅ Category `{nom}` deleted.", ephemeral=False)
 
-    @discord.slash_command(name="ticket_ping", description="Définir le rôle staff")
+    @discord.slash_command(name="ticket_ping", description="Define the staff role")
     @commands.has_permissions(administrator=True)
     async def ticket_ping(self, ctx, role: discord.Role):
         data = load_data()
@@ -378,7 +382,7 @@ class TicketSystem(commands.Cog):
             data["config"][guild_id] = {}
         data["config"][guild_id]["ping_role"] = role.id
         save_data(data)
-        await ctx.respond(f"✅ Rôle de ping : {role.mention}", ephemeral=False)
+        await ctx.respond(f"✅ Ping role : {role.mention}", ephemeral=False)
 
 def setup(bot):
     bot.add_cog(TicketSystem(bot))
