@@ -85,7 +85,7 @@ class TicketSystem(commands.Cog):
 
         async def select_callback(interaction):
             category = interaction.data['values'][0]
-            # ✅ LA SEULE MODIFICATION : suppression de la restriction
+            # ✅ SUPPRESSION DE LA RESTRICTION → tout le monde peut cliquer
             guild = interaction.guild
             user = interaction.user
 
@@ -100,7 +100,8 @@ class TicketSystem(commands.Cog):
                 role = guild.get_role(config["ping_role"])
                 if role:
                     overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                    ping_line = f"{role.mention}"
+                    # ✅ CORRECTION DU PING : force la mention même si non mentionnable
+                    ping_line = f"<@&{role.id}>"
 
             channel = await guild.create_text_channel(
                 name=f"ticket-{user.name}",
@@ -171,11 +172,11 @@ class TicketSystem(commands.Cog):
                                 f"📄 **Transcript — Ticket {ticket_id}**\n```txt\n" + "\n".join(messages[:100]) + "\n```"
                             )
 
-                # ✅ BARRE DE PROGRESSION 24H — AJOUTÉE ICI (SEULE CHOSE AJOUTÉE)
+                # ✅ BARRE DE PROGRESSION 24H
                 progress_24h = await interaction.channel.send("```\n[░░░░░░░░░░] 0% — Suppression dans 24h...\n```")
-                total_steps = 96  # 24h * 4 (toutes les 15 min)
+                total_steps = 96
                 for step in range(1, total_steps + 1):
-                    await asyncio.sleep(900)  # 15 minutes
+                    await asyncio.sleep(900)
                     pct = int((step / total_steps) * 100)
                     filled = "█" * min(step, 10)
                     empty = "░" * max(0, 10 - step)
@@ -214,6 +215,7 @@ class TicketSystem(commands.Cog):
         if ctx.guild.icon:
             embed.set_thumbnail(url=ctx.guild.icon.url)
 
+        # ✅ TIMEOUT = None → jamais expiré
         view = discord.ui.View(timeout=None)
         view.add_item(select)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
@@ -237,7 +239,7 @@ class TicketSystem(commands.Cog):
             role = ctx.guild.get_role(config["ping_role"])
             if role:
                 overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                ping_line = f"{role.mention}"
+                ping_line = f"<@&{role.id}>"
 
         channel = await ctx.guild.create_text_channel(
             name=f"ticket-{ctx.author.name}",
