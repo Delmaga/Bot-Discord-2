@@ -8,44 +8,41 @@ class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="stats", description="📊 Statistiques — Seïko Quantum Display")
+    @discord.slash_command(name="stats", description="📊 Statistiques du serveur et du bot")
     async def stats(self, ctx):
         guild = ctx.guild
         if not guild:
             return await ctx.respond("❌ Commande utilisable uniquement dans un serveur.", ephemeral=False)
 
-        # Données statiques
         total_members = guild.member_count
         humans = sum(1 for m in guild.members if not m.bot)
         bots = total_members - humans
         channels = len(guild.channels)
         roles = len(guild.roles)
 
-        # ✅ Message initial (simulation de chargement)
-        msg = await ctx.respond("```\n[░░░░░░░░░░] Connexion au système...\n```", ephemeral=False)
-        await asyncio.sleep(0.5)
+        # ✅ Simulation de latence dynamique
+        msg = await ctx.respond("```\n[░░░░░░░░░░] Chargement des données...\n```", ephemeral=False)
+        await asyncio.sleep(0.4)
 
-        # ✅ 3 mises à jour pour simuler la "latence vivante"
-        for i in range(3):
-            # Génère une latence aléatoire entre 25 et 75 ms
+        for _ in range(3):
             fake_ping = random.randint(25, 75)
-
             content = (
                 "```\n"
-                "\u001b[2;36m |------------------------------------|\u001b[0m\n"
-                "\u001b[2;36m |\u001b[0m \u001b[1;33mSYSTÈME DE SURVEILLANCE — SEÏKO\u001b[0m \u001b[2;36m║\u001b[0m\n"
-                "\u001b[2;36m |------------------------------------|\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 📁 \u001b[1;37mServeur\u001b[0m          \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 👥 Membres : \u001b[1;33m{total_members:,}\u001b[0m     \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 🧑 Humains  : \u001b[1;32m{humans:,}\u001b[0m      \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 🤖 Bots     : \u001b[1;31m{bots:,}\u001b[0m        \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 📚 Salons   : \u001b[1;36m{channels}\u001b[0m         \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 🎭 Rôles    : \u001b[1;35m{roles}\u001b[0m         \u001b[2;36m║\u001b[0m\n"
-                "\u001b[2;36m |------------------------------------|\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 🤖 \u001b[1;37mBot\u001b[0m               \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 📡 Latence  : \u001b[1;33m{fake_ping} ms\u001b[0m      \u001b[2;36m║\u001b[0m\n"
-                f"\u001b[2;36m|\u001b[0m 🕒 Uptime   : \u001b[1;32mEn ligne\u001b[0m       \u001b[2;36m║\u001b[0m\n"
-                "\u001b[2;36m |------------------------------------|\u001b[0m\n"
+                "┌──────────────────────────────────────┐\n"
+                "│       SYSTÈME DE SURVEILLANCE        │\n"
+                "│              — SEÏKO —               │\n"
+                "├──────────────────────────────────────┤\n"
+                f"│ 📁 Serveur                           │\n"
+                f"│ 👥 Membres : {total_members:<24} │\n"
+                f"│ 🧑 Humains  : {humans:<24} │\n"
+                f"│ 🤖 Bots     : {bots:<24} │\n"
+                f"│ 📚 Salons   : {channels:<24} │\n"
+                f"│ 🎭 Rôles    : {roles:<24} │\n"
+                "├──────────────────────────────────────┤\n"
+                f"│ 🤖 Bot                               │\n"
+                f"│ 📡 Latence  : {fake_ping} ms{' ' * (21 - len(str(fake_ping)))} │\n"
+                "│ 🕒 Uptime   : En ligne               │\n"
+                "└──────────────────────────────────────┘\n"
                 "```"
             )
             await msg.edit(content=content)
@@ -55,20 +52,21 @@ class Stats(commands.Cog):
         real_ping = round(self.bot.latency * 1000)
         final_content = (
             "```\n"
-            "\u001b[2;36m |------------------------------------|\u001b[0m\n"
-            "\u001b[2;36m |\u001b[0m \u001b[1;33mSYSTÈME DE SURVEILLANCE — SEÏKO\u001b[0m \u001b[2;36m║\u001b[0m\n"
-            "\u001b[2;36m |------------------------------------|\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 📁 \u001b[1;37mServeur\u001b[0m          \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 👥 Membres : \u001b[1;33m{total_members:,}\u001b[0m     \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 🧑 Humains  : \u001b[1;32m{humans:,}\u001b[0m      \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 🤖 Bots     : \u001b[1;31m{bots:,}\u001b[0m        \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 📚 Salons   : \u001b[1;36m{channels}\u001b[0m         \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 🎭 Rôles    : \u001b[1;35m{roles}\u001b[0m         \u001b[2;36m║\u001b[0m\n"
-            "\u001b[2;36m |-----------------------------------|\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 🤖 \u001b[1;37mBot\u001b[0m               \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 📡 Latence  : \u001b[1;33m{real_ping} ms\u001b[0m      \u001b[2;36m║\u001b[0m\n"
-            f"\u001b[2;36m|\u001b[0m 🕒 Uptime   : \u001b[1;32mEn ligne\u001b[0m       \u001b[2;36m║\u001b[0m\n"
-            "\u001b[2;36m |-----------------------------------|\u001b[0m\n"
+            "┌──────────────────────────────────────┐\n"
+            "│       SYSTÈME DE SURVEILLANCE        │\n"
+            "│              — SEÏKO —               │\n"
+            "├──────────────────────────────────────┤\n"
+            f"│ 📁 Serveur                           │\n"
+            f"│ 👥 Membres : {total_members:<24} │\n"
+            f"│ 🧑 Humains  : {humans:<24} │\n"
+            f"│ 🤖 Bots     : {bots:<24} │\n"
+            f"│ 📚 Salons   : {channels:<24} │\n"
+            f"│ 🎭 Rôles    : {roles:<24} │\n"
+            "├──────────────────────────────────────┤\n"
+            f"│ 🤖 Bot                               │\n"
+            f"│ 📡 Latence  : {real_ping} ms{' ' * (21 - len(str(real_ping)))} │\n"
+            "│ 🕒 Uptime   : En ligne               │\n"
+            "└──────────────────────────────────────┘\n"
             "```"
         )
         await msg.edit(content=final_content)
