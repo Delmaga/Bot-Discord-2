@@ -68,6 +68,16 @@ class TicketSystem(commands.Cog):
             save_data(data)
 
         config = data["config"][guild_id]
+
+        # ✅ CORRECTION : garantit que "categories" existe
+        if "categories" not in config or not config["categories"]:
+            config["categories"] = [
+                {"name": "Support", "description": "Besoin d'aide ?", "emoji": "💬"},
+                {"name": "Bug", "description": "Signaler un bug", "emoji": "🐛"},
+                {"name": "Autre", "description": "Toute autre demande", "emoji": "📝"}
+            ]
+            save_data(data)
+
         options = []
         for cat in config["categories"]:
             options.append(
