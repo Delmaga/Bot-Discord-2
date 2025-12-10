@@ -8,14 +8,14 @@ import asyncio
 
 def load_data():
     os.makedirs("data", exist_ok=True)
-    path = "data/tickets_seiko_v9.json"
+    path = "data/tickets_seiko_v10.json"
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return {"config": {}, "tickets": {}}
 
 def save_data(data):
-    with open("data/tickets_seiko_v9.json", "w", encoding="utf-8") as f:
+    with open("data/tickets_seiko_v10.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 class TicketHandler(commands.Cog):
@@ -63,13 +63,14 @@ class TicketSystem(commands.Cog):
                 ],
                 "ping_role": None,
                 "transcript_channel": None,
-                "footer": "By Seïko"
+                "footer": "By Seïko",
+                "ticket_counter": 1  # ✅ Compteur initial
             }
             save_data(data)
 
         config = data["config"][guild_id]
 
-        # ✅ CORRECTION 1 : Vérifie que "categories" existe
+        # ✅ Vérifie que "categories" existe
         if "categories" not in config or not config["categories"]:
             config["categories"] = [
                 {"name": "Support", "description": "Besoin d'aide ?", "emoji": "💬"},
@@ -89,16 +90,14 @@ class TicketSystem(commands.Cog):
             )
 
         select = discord.ui.Select(
-            placeholder="Veuillez sélectionner une catégorie",
+            placeholder="Sélectionnez une catégorie",
             options=options
         )
 
         async def select_callback(interaction):
-            # ✅ CORRECTION 2 : Réponds IMMÉDIATEMENT
             await interaction.response.defer(ephemeral=False)
 
             category = interaction.data['values'][0]
-            # ✅ SUPPRESSION DE LA RESTRICTION → tout le monde peut cliquer
             guild = interaction.guild
             user = interaction.user
 
@@ -113,25 +112,29 @@ class TicketSystem(commands.Cog):
                 role = guild.get_role(config["ping_role"])
                 if role:
                     overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
-                    # ✅ CORRECTION 3 : Force la mention
                     ping_line = f"<@&{role.id}>"
 
+            # ✅ Utilise le numéro du ticket
+            ticket_number = config["ticket_counter"]
+            config["ticket_counter"] = ticket_number + 1
+            save_data(data)
+
             channel = await guild.create_text_channel(
-                name=f"ticket-{user.name}",
+                name=f"{ticket_number}-{category}",
                 overwrites=overwrites,
-                reason=f"Ticket ouvert par {user}"
+                reason=f"Ticket #{ticket_number} par {user.name}"
             )
 
-            # ✅ BARRE DE PROGRESSION — 2 secondes
-            progress_msg = await channel.send("```\n[░░░░░░░░░░] 0% — Initialisation...\n```")
+            # ✅ BARRE 2S
+            progress = await channel.send("```\n[░░░░░░░░░░] 0% — Initialisation...\n```")
             for i in range(1, 11):
                 await asyncio.sleep(0.2)
                 bars = "█" * i + "░" * (10 - i)
                 pct = i * 10
-                await progress_msg.edit(content=f"```\n[{bars}] {pct}% — Création en cours...\n```")
-            await progress_msg.edit(content="```\n[██████████] 100% — Ticket initialisé !\n```")
+                await progress.edit(content=f"```\n[{bars}] {pct}% — Création...\n```")
+            await progress.edit(content="```\n[██████████] 100% — Ticket initialisé !\n```")
             await asyncio.sleep(1)
-            await progress_msg.delete()
+            await progress.delete()
 
             ticket_id = str(channel.id)
             data["tickets"][ticket_id] = {
@@ -148,6 +151,7 @@ class TicketSystem(commands.Cog):
                 "───────────────────────────────────────",
                 f"📁 Catégorie : **{category}**",
                 f"👤 Utilisateur : **{user.name}**",
+                f"🔢 Ticket N° : **{ticket_number}**",
                 f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
                 "───────────────────────────────────────",
                 "▶️ En attente de prise en charge...",
@@ -180,7 +184,7 @@ class TicketSystem(commands.Cog):
                             if m.type == discord.MessageType.default and not m.author.bot:
                                 msgs.append(f"[{m.created_at.strftime('%H:%M')}] {m.author}: {m.content}")
                         if msgs:
-                            await ch.send(f"📄 **Transcript — {ticket_id}**\n```txt\n" + "\n".join(msgs[:100]) + "\n```")
+                            await ch.send(f"📄 **Transcript — Ticket {ticket_number}**\n```txt\n" + "\n".join(msgs[:100]) + "\n```")
 
                 # ✅ BARRE 24H
                 prog = await i.channel.send("```\n[░░░░░░░░░░] 0% — Suppression...\n```")
@@ -210,19 +214,16 @@ class TicketSystem(commands.Cog):
                     item.callback = close_callback
 
             await channel.send(view=view)
-
-            # ✅ CORRECTION 4 : Utilise followup, pas response
-            await interaction.followup.send(f"✅ Ticket : {channel.mention}", ephemeral=False)
+            await interaction.followup.send(f"✅ Ticket **#{ticket_number}** créé : {channel.mention}", ephemeral=False)
 
         select.callback = select_callback
-
         embed = discord.Embed(
             title="🎫 **CENTRE D’ASSISTANCE**",
             description="Sélectionnez une catégorie ci-dessous.",
             color=0x2b2d31
         )
         embed.set_footer(text="By Seïko")
-        view = discord.ui.View(timeout=None)  # ✅ Jamais expiré
+        view = discord.ui.View(timeout=None)
         view.add_item(select)
         await ctx.respond(embed=embed, view=view, ephemeral=False)
 
@@ -231,8 +232,18 @@ class TicketSystem(commands.Cog):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"categories": [], "ping_role": None}
+            data["config"][guild_id] = {
+                "categories": [],
+                "ping_role": None,
+                "ticket_counter": 1
+            }
         config = data["config"][guild_id]
+        if "ticket_counter" not in config:
+            config["ticket_counter"] = 1
+
+        ticket_number = config["ticket_counter"]
+        config["ticket_counter"] = ticket_number + 1
+        save_data(data)
 
         overwrites = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -248,7 +259,7 @@ class TicketSystem(commands.Cog):
                 ping_line = f"<@&{role.id}>"
 
         channel = await ctx.guild.create_text_channel(
-            name=f"ticket-{ctx.author.name}",
+            name=f"{ticket_number}-{category}",
             overwrites=overwrites,
             category=salon.category
         )
@@ -268,6 +279,7 @@ class TicketSystem(commands.Cog):
             "───────────────────────────────────────",
             f"📁 Catégorie : **{category}**",
             f"👤 Utilisateur : **{ctx.author.name}**",
+            f"🔢 Ticket N° : **{ticket_number}**",
             f"🕒 Heure : **{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}**",
             "───────────────────────────────────────",
             "▶️ En attente...",
@@ -275,9 +287,7 @@ class TicketSystem(commands.Cog):
             "Merci de détailler votre demande."
         ]
         await channel.send(content="\n".join(message_lines))
-        await ctx.respond(f"✅ Ticket : {channel.mention}", ephemeral=False)
-
-    # ... autres commandes inchangées (ticket_transcript, category_add, etc.) ...
+        await ctx.respond(f"✅ Ticket **#{ticket_number}** : {channel.mention}", ephemeral=False)
 
     @discord.slash_command(name="ticket_transcript", description="Salon pour les transcripts")
     @commands.has_permissions(administrator=True)
@@ -296,7 +306,7 @@ class TicketSystem(commands.Cog):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"categories": []}
+            data["config"][guild_id] = {"categories": [], "ticket_counter": 1}
         config = data["config"][guild_id]
         if "categories" not in config:
             config["categories"] = []
