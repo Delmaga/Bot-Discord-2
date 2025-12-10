@@ -64,7 +64,7 @@ class TicketSystem(commands.Cog):
                 "ping_role": None,
                 "transcript_channel": None,
                 "footer": "By Seïko",
-                "ticket_counter": 1  # ✅ Compteur initial
+                "ticket_counter": 1
             }
             save_data(data)
 
@@ -114,7 +114,11 @@ class TicketSystem(commands.Cog):
                     overwrites[role] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
                     ping_line = f"<@&{role.id}>"
 
-            # ✅ Utilise le numéro du ticket
+            # ✅ Vérifie et initialise ticket_counter
+            if "ticket_counter" not in config:
+                config["ticket_counter"] = 1
+                save_data(data)
+
             ticket_number = config["ticket_counter"]
             config["ticket_counter"] = ticket_number + 1
             save_data(data)
@@ -238,8 +242,11 @@ class TicketSystem(commands.Cog):
                 "ticket_counter": 1
             }
         config = data["config"][guild_id]
+
+        # ✅ Vérifie ticket_counter
         if "ticket_counter" not in config:
             config["ticket_counter"] = 1
+            save_data(data)
 
         ticket_number = config["ticket_counter"]
         config["ticket_counter"] = ticket_number + 1
@@ -306,7 +313,11 @@ class TicketSystem(commands.Cog):
         data = load_data()
         guild_id = str(ctx.guild.id)
         if guild_id not in data["config"]:
-            data["config"][guild_id] = {"categories": [], "ticket_counter": 1}
+            data["config"][guild_id] = {
+                "categories": [],
+                "ping_role": None,
+                "ticket_counter": 1
+            }
         config = data["config"][guild_id]
         if "categories" not in config:
             config["categories"] = []
