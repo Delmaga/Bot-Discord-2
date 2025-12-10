@@ -1,76 +1,38 @@
 # cogs/stats.py
 import discord
 from discord.ext import commands
-import asyncio
-import random
+from datetime import datetime
 
 class Stats(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @discord.slash_command(name="stats", description="📊 Server and bot statistics")
+    @discord.slash_command(name="stats", description="📊 Statistiques — Console Seïko")
     async def stats(self, ctx):
         guild = ctx.guild
         if not guild:
-            return await ctx.respond("❌ Command usable only on a server.", ephemeral=False)
+            return await ctx.respond("❌ Commande utilisable uniquement dans un serveur.", ephemeral=False)
 
         total_members = guild.member_count
         humans = sum(1 for m in guild.members if not m.bot)
         bots = total_members - humans
         channels = len(guild.channels)
         roles = len(guild.roles)
-        real_ping = round(self.bot.latency * 1000)
+        ping = round(self.bot.latency * 1000)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # ✅ Simulation de latence dynamique
-        msg = await ctx.respond("```\n[░░░░░░░░░░] Loading data...\n```", ephemeral=False)
-        await asyncio.sleep(0.4)
-
-        for _ in range(3):
-            fake_ping = random.randint(25, 75)
-            content = (
-                "```\n"
-            "┌─────────────────────────────────────────────────────────────────┐\n"
-            "│                       MONITORING SYSTEM                         │\n"
-            "│                           — Seïko ─                             │\n"
-            "├─────────────────────────────────────────────────────────────────┤\n"
-            f"│                         📁 Server                            │\n"
-            f"│ 👥 Members : {total_members:<24}                              │\n"
-            f"│ 🧑 Humans  : {humans:<24}                                    │\n"
-            f"│ 🤖 Bots     : {bots:<24}                                      │\n"
-            f"│ 📚 Fairs   : {channels:<24}                                  │\n"
-            f"│ 🎭 Rôles    : {roles:<24}                                     │\n"
-            "├────────────────────────────────────────────────────────────────┤\n"
-            f"│                            🤖 Bot                             │\n"
-            f"│ 📡 Latency  : {real_ping} ms{' ' * (21 - len(str(real_ping)))}│\n"
-            "│ 🕒 Uptime   : Online                                           │\n"
-            "└────────────────────────────────────────────────────────────────┘\n"
-            "```"
-            )
-            await msg.edit(content=content)
-            await asyncio.sleep(0.4)
-
-        # ✅ Dernière mise à jour : latence réelle
-        real_ping = round(self.bot.latency * 1000)
-        final_content = (
-            "```\n"
-            "┌─────────────────────────────────────────────────────────────────┐\n"
-            "│                      SYSTÈME DE SURVEILLANCE                    │\n"
-            "│                           — Seïko ─                             │\n"
-            "├─────────────────────────────────────────────────────────────────┤\n"
-            f"│                         📁 Serveur                            │\n"
-            f"│ 👥 Membres : {total_members:<24}                              │\n"
-            f"│ 🧑 Humains  : {humans:<24}                                    │\n"
-            f"│ 🤖 Bots     : {bots:<24}                                      │\n"
-            f"│ 📚 Salons   : {channels:<24}                                  │\n"
-            f"│ 🎭 Rôles    : {roles:<24}                                     │\n"
-            "├────────────────────────────────────────────────────────────────┤\n"
-            f"│                            🤖 Bot                             │\n"
-            f"│ 📡 Latence  : {real_ping} ms{' ' * (21 - len(str(real_ping)))}│\n"
-            "│ 🕒 Uptime   : En ligne                                         │\n"
-            "└────────────────────────────────────────────────────────────────┘\n"
-            "```"
+        content = (
+            f"[SERVER]    SYSTÈME DE SURVEILLANCE — SEÏKO                              {now}\n"
+            f"[SERVER] Membre : {total_members}\n"
+            f"[SERVER] Humains : {humans}\n"
+            f"[SERVER] Bots : {bots}\n"
+            f"[SERVER] Salons : {channels}\n"
+            f"[SERVER] Rôles : {roles}\n"
+            f"[SERVER] Latence : {ping} ms\n"
+            f"[SERVER] Uptime : En ligne"
         )
-        await msg.edit(content=final_content)
+
+        await ctx.respond(content, ephemeral=False)
 
 def setup(bot):
     bot.add_cog(Stats(bot))
